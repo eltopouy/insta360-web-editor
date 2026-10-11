@@ -125,6 +125,67 @@ export const StitchingControls: React.FC<StitchingControlsProps> = ({
             <span>{t('stitchingActive')}</span>
           </div>
 
+          {/* Camera Model Quick Profiles */}
+          <div className="space-y-1.5">
+            <div className="text-[11px] font-semibold text-gray-300">{t('cameraPresets')}</div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    lensFov: 198.5,
+                    blendAngle: 11.5,
+                    radiusScale: 0.99,
+                    centerOffsetX1: 0,
+                    centerOffsetY1: 0,
+                    centerOffsetX2: 0,
+                    centerOffsetY2: 0,
+                  })
+                }
+                className="px-2 py-1.5 text-[10px] font-medium bg-studio-700/60 hover:bg-studio-600 text-gray-200 hover:text-white rounded border border-white/10 hover:border-studio-accent/40 transition-all text-center truncate"
+                title="Insta360 ONE R / ONE RS (Dual-Lens 360 Mod - 6080x3040)"
+              >
+                {t('presetOneR')}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    lensFov: 200.0,
+                    blendAngle: 10.0,
+                    radiusScale: 1.0,
+                    centerOffsetX1: 0,
+                    centerOffsetY1: 0,
+                    centerOffsetX2: 0,
+                    centerOffsetY2: 0,
+                  })
+                }
+                className="px-2 py-1.5 text-[10px] font-medium bg-studio-700/60 hover:bg-studio-600 text-gray-200 hover:text-white rounded border border-white/10 hover:border-studio-accent/40 transition-all text-center truncate"
+                title="Insta360 ONE X / ONE X2 (5760x2880)"
+              >
+                {t('presetOneX')}
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  onChange({
+                    lensFov: 200.0,
+                    blendAngle: 10.0,
+                    radiusScale: 1.0,
+                    centerOffsetX1: 0,
+                    centerOffsetY1: 0,
+                    centerOffsetX2: 0,
+                    centerOffsetY2: 0,
+                  })
+                }
+                className="px-2 py-1.5 text-[10px] font-medium bg-studio-700/60 hover:bg-studio-600 text-gray-200 hover:text-white rounded border border-white/10 hover:border-studio-accent/40 transition-all text-center truncate"
+                title="Insta360 X3 / X4 (5.7K / 8K)"
+              >
+                {t('presetX3X4')}
+              </button>
+            </div>
+          </div>
+
           {/* Lens FOV */}
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs">

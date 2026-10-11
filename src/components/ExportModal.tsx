@@ -35,7 +35,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   stitching,
 }) => {
   const { t } = useTranslation();
-  const [resolution, setResolution] = useState<'orig' | '8k' | '5.7k' | '4k' | '2k'>('orig');
+  const [resolution, setResolution] = useState<'orig' | '8k' | '6k' | '5.7k' | '4k' | '2k'>('orig');
   const [format, setFormat] = useState<'jpeg' | 'png'>('jpeg');
   const [quality, setQuality] = useState(0.95);
   const [embedGPano, setEmbedGPano] = useState(true);
@@ -47,14 +47,15 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   const getTargetDimensions = (): { width: number; height: number } => {
     switch (resolution) {
       case '8k': return { width: 7680, height: 3840 };
-      case '5.7k': return { width: 5760, height: 2880 }; // Native Insta360 X3 / X4
+      case '6k': return { width: 6080, height: 3040 }; // Native Insta360 ONE R / ONE RS
+      case '5.7k': return { width: 5760, height: 2880 }; // Native Insta360 X3 / X4 / ONE X
       case '4k': return { width: 3840, height: 1920 };
       case '2k': return { width: 2048, height: 1024 };
       case 'orig':
       default:
         return {
-          width: sourceWidth || 4096,
-          height: sourceHeight || 2048,
+          width: sourceWidth || 6080,
+          height: sourceHeight || 3040,
         };
     }
   };
@@ -196,7 +197,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             <label className="text-xs font-semibold text-gray-300">{t('exportOutputResolution')}</label>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'orig', label: t('resOriginal'), desc: `${sourceWidth || 4096}×${sourceHeight || 2048}` },
+                { id: 'orig', label: t('resOriginal'), desc: `${sourceWidth || 6080}×${sourceHeight || 3040}` },
+                { id: '6k', label: t('res6k'), desc: t('res6kDesc') },
                 { id: '5.7k', label: t('res57k'), desc: t('res57kDesc') },
                 { id: '8k', label: t('res8k'), desc: '7680×3840' },
                 { id: '4k', label: t('res4k'), desc: '3840×1920' },

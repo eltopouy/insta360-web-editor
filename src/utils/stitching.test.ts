@@ -126,4 +126,33 @@ describe('Insta360 Optical Stitching Engine & Math Tests', () => {
       `Expected seamless horizon match at x=0 (${yStart}) and x=width (${yEnd})`
     );
   });
+
+  it('verifies optical projection with Insta360 ONE R (Dual-Lens 360 Mod) specifications', () => {
+    const oneRConfig: StitchingConfig = {
+      projection: 'dual_fisheye',
+      lensFov: 198.5,     // ONE R modular 360 lens FOV
+      blendAngle: 11.5,    // Feather overlap angle
+      centerOffsetX1: 0,
+      centerOffsetY1: 0,
+      centerOffsetX2: 0,
+      centerOffsetY2: 0,
+      radiusScale: 0.99,
+    };
+
+    // Forward ray (-Z)
+    const front = sampleDualFisheyeCoordinates({ x: 0, y: 0, z: -1 }, oneRConfig);
+    assert.strictEqual(front.weightFront, 1.0);
+    assert.ok(Math.abs(front.uv1[0] - 0.25) < 1e-4);
+    assert.ok(Math.abs(front.uv1[1] - 0.50) < 1e-4);
+
+    // Seam equator ray (X=1, Z=0)
+    const seam = sampleDualFisheyeCoordinates({ x: 1, y: 0, z: 0 }, oneRConfig);
+    assert.ok(Math.abs(seam.weightFront - 0.5) < 1e-4, 'ONE R seam must blend at exactly 50%');
+
+    // Rear ray (+Z)
+    const rear = sampleDualFisheyeCoordinates({ x: 0, y: 0, z: 1 }, oneRConfig);
+    assert.strictEqual(rear.weightFront, 0.0);
+    assert.ok(Math.abs(rear.uv2[0] - 0.75) < 1e-4);
+    assert.ok(Math.abs(rear.uv2[1] - 0.50) < 1e-4);
+  });
 });

@@ -76,7 +76,11 @@ export const App: React.FC = () => {
   // Handle uploaded file (fast, zero memory explosion for 5.7K/8K files)
   const handleProcessFile = (file: File) => {
     cleanupObjectUrl();
-    const objectUrl = URL.createObjectURL(file);
+    const isInsp = file.name.toLowerCase().endsWith('.insp');
+    // Insta360 .insp files are binary JPEGs with proprietary metadata trailer.
+    // Explicitly creating an image/jpeg blob ensures any browser decodes it natively.
+    const blob = isInsp ? new Blob([file], { type: 'image/jpeg' }) : file;
+    const objectUrl = URL.createObjectURL(blob);
     currentObjectUrlRef.current = objectUrl;
 
     setImageSrc(objectUrl);
