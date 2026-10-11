@@ -1,7 +1,26 @@
 {
   "name": "insta360-web-editor",
-  "private": true,
   "version": "1.0.0",
+  "description": "Professional 360 photo web editor with GPU optical stitching for Insta360 ONE R, X, X2, X3, X4, interactive 3D reframe, nadir tripod remover, and Model Context Protocol (MCP) AI bridge.",
+  "author": "eltopouy",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/eltopouy/insta360-web-editor.git"
+  },
+  "keywords": [
+    "insta360",
+    "one-r",
+    "360-photo",
+    "photo-sphere",
+    "threejs",
+    "equirectangular",
+    "dual-fisheye",
+    "stitching",
+    "mcp",
+    "model-context-protocol"
+  ],
+  "private": false,
   "type": "module",
   "scripts": {
     "dev": "vite",

@@ -40,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       onFileUpload(e.target.files[0]);
+      e.target.value = '';
     }
   };
 
