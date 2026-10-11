@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "insta360-web-editor": {
+      "command": "node",
+      "args": [
+        "C:\\Users\\Andrés\\.gemini\\antigravity\\scratch\\insta360-web-editor\\mcp\\server.mjs"
+      ],
+      "env": {
+        "MCP_BRIDGE_PORT": "5174"
+      }
+    }
+  }
+}
