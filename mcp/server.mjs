@@ -38,6 +38,7 @@ let editorState = {
     color: '#15191e',
   },
   viewMode: 'split',
+  language: 'es',
   fileName: 'demo_insta360_panorama.jpg',
   lastUpdate: Date.now(),
 };
@@ -433,6 +434,22 @@ const TOOLS = [
     },
   },
   {
+    name: 'set_language',
+    description:
+      'Cambia el idioma nativo de la interfaz web entre Español ("es"), Inglés ("en") o Chino simplificado ("zh").',
+    inputSchema: {
+      type: 'object',
+      required: ['language'],
+      properties: {
+        language: {
+          type: 'string',
+          enum: ['es', 'en', 'zh'],
+          description: 'Código de idioma deseado: "es" (Español), "en" (English), "zh" (简体中文).',
+        },
+      },
+    },
+  },
+  {
     name: 'open_export_modal',
     description:
       'Abre en la interfaz del usuario la ventana modal de exportación para guardar la foto panorámica equirrectangular con metadatos Google Photo Sphere / GPano XMP.',
@@ -619,6 +636,34 @@ function handleToolCall(name, args) {
           {
             type: 'text',
             text: `Captura reframe ejecutada en el navegador con relación de aspecto ${aspect} y FOV ${fov}°. La descarga de la fotografía 2D se ha iniciado automáticamente.`,
+          },
+        ],
+      };
+    }
+
+    case 'set_language': {
+      const lang = args.language;
+      if (!['es', 'en', 'zh'].includes(lang)) {
+        return {
+          isError: true,
+          content: [
+            {
+              type: 'text',
+              text: `Idioma "${lang}" no válido. Opciones permitidas: "es" (Español), "en" (English), "zh" (简体中文).`,
+            },
+          ],
+        };
+      }
+
+      editorState.language = lang;
+      broadcastToWeb({ type: 'SET_LANGUAGE', data: { language: lang } });
+
+      const names = { es: 'Español', en: 'English', zh: '简体中文' };
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Idioma del editor web cambiado a ${names[lang]} [${lang}]${connectionNotice}.`,
           },
         ],
       };

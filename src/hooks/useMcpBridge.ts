@@ -12,10 +12,12 @@ interface McpBridgeProps {
   nadirPatch: NadirPatchConfig;
   viewMode: ViewMode;
   fileName: string;
+  language?: string;
   onUpdateOrientation: (orient: Partial<Orientation>) => void;
   onUpdateColors: (colors: Partial<ColorAdjustments>) => void;
   onUpdateNadir: (nadir: Partial<NadirPatchConfig>) => void;
   onUpdateViewMode: (mode: ViewMode) => void;
+  onUpdateLanguage?: (lang: any) => void;
   onResetOrientation: () => void;
   onAutoLevel: () => void;
   onTriggerExport: () => void;
@@ -28,10 +30,12 @@ export function useMcpBridge({
   nadirPatch,
   viewMode,
   fileName,
+  language,
   onUpdateOrientation,
   onUpdateColors,
   onUpdateNadir,
   onUpdateViewMode,
+  onUpdateLanguage,
   onResetOrientation,
   onAutoLevel,
   onTriggerExport,
@@ -60,6 +64,7 @@ export function useMcpBridge({
                 nadirPatch,
                 viewMode,
                 fileName,
+                language,
               },
             })
           );
@@ -86,6 +91,11 @@ export function useMcpBridge({
                 break;
               case 'SET_VIEW_MODE':
                 onUpdateViewMode(msg.data);
+                break;
+              case 'SET_LANGUAGE':
+                if (onUpdateLanguage && msg.data?.language) {
+                  onUpdateLanguage(msg.data.language);
+                }
                 break;
               case 'TRIGGER_EXPORT':
                 onTriggerExport();
@@ -138,11 +148,12 @@ export function useMcpBridge({
             nadirPatch,
             viewMode,
             fileName,
+            language,
           },
         })
       );
     }
-  }, [orientation, colorAdjustments, nadirPatch, viewMode, fileName]);
+  }, [orientation, colorAdjustments, nadirPatch, viewMode, fileName, language]);
 
   return { isConnected };
 }

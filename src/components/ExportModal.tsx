@@ -8,6 +8,7 @@ import {
   createShaderRotationMatrix,
 } from '../utils/equirectangularShader';
 import { injectGPanoMetadataToBlob } from '../utils/gpanoMetadata';
+import { useTranslation } from '../i18n/I18nContext';
 import { Check, Download, Loader2, Sparkles, X } from 'lucide-react';
 
 interface ExportModalProps {
@@ -31,6 +32,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   colorAdjustments,
   nadirPatch,
 }) => {
+  const { t } = useTranslation();
   const [resolution, setResolution] = useState<'orig' | '8k' | '5.7k' | '4k' | '2k'>('orig');
   const [format, setFormat] = useState<'jpeg' | 'png'>('jpeg');
   const [quality, setQuality] = useState(0.95);
@@ -151,7 +153,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       }, 500);
     } catch (err) {
       console.error(err);
-      alert('Error al exportar la imagen');
+      alert(t('exportError'));
       setIsExporting(false);
     }
   };
@@ -165,7 +167,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-studio-900/50">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-studio-accent" />
-            <h2 className="text-sm font-bold uppercase tracking-wider text-white">Exportar Foto 360</h2>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white">{t('exportModalTitle')}</h2>
           </div>
           <button
             onClick={onClose}
@@ -180,13 +182,13 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         <div className="p-5 space-y-5">
           {/* Resolution Options */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-300">Resolución de Salida</label>
+            <label className="text-xs font-semibold text-gray-300">{t('exportOutputResolution')}</label>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'orig', label: 'Original', desc: `${sourceWidth || 4096}×${sourceHeight || 2048}` },
-                { id: '5.7k', label: '5.7K Insta360', desc: '5760×2880 (Nativa)' },
-                { id: '8k', label: '8K Ultra HD', desc: '7680×3840' },
-                { id: '4k', label: '4K Standard', desc: '3840×1920' },
+                { id: 'orig', label: t('resOriginal'), desc: `${sourceWidth || 4096}×${sourceHeight || 2048}` },
+                { id: '5.7k', label: t('res57k'), desc: t('res57kDesc') },
+                { id: '8k', label: t('res8k'), desc: '7680×3840' },
+                { id: '4k', label: t('res4k'), desc: '3840×1920' },
               ].map((r) => (
                 <button
                   key={r.id}
@@ -206,11 +208,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
 
           {/* Format */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-gray-300">Formato de Archivo</label>
+            <label className="text-xs font-semibold text-gray-300">{t('exportFileFormat')}</label>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { id: 'jpeg', label: 'JPEG (Recomendado)', desc: 'Ligero con metadatos GPano' },
-                { id: 'png', label: 'PNG Sin Pérdida', desc: 'Máxima calidad sin compresión' },
+                { id: 'jpeg', label: t('formatJpegTitle'), desc: t('formatJpegDesc') },
+                { id: 'png', label: t('formatPngTitle'), desc: t('formatPngDesc') },
               ].map((f) => (
                 <button
                   key={f.id}
@@ -241,11 +243,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               />
               <div className="space-y-0.5 text-left">
                 <span className="text-xs font-semibold text-gray-200 flex items-center gap-1.5">
-                  Incrustar Metadatos Google Photo Sphere (GPano XMP)
+                  {t('embedGPanoTitle')}
                   <Check className="w-3.5 h-3.5 text-studio-accent" />
                 </span>
                 <p className="text-[10px] text-gray-400 leading-tight">
-                  Permite que Facebook, Google Fotos, visores VR y apps reconozcan el archivo automáticamente como foto 360 interactiva.
+                  {t('embedGPanoDesc')}
                 </p>
               </div>
             </label>
@@ -255,7 +257,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           {isExporting && (
             <div className="space-y-1.5 pt-2">
               <div className="flex justify-between text-xs font-mono text-gray-400">
-                <span>Procesando en GPU...</span>
+                <span>{t('exportingGpu')}</span>
                 <span>{exportProgress}%</span>
               </div>
               <div className="w-full bg-studio-900 rounded-full h-2 overflow-hidden">
@@ -271,7 +273,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         {/* Footer */}
         <div className="px-5 py-4 bg-studio-900/80 border-t border-white/10 flex items-center justify-between">
           <div className="text-[11px] font-mono text-gray-400">
-            Salida: {targetW} × {targetH} px
+            {t('exportOutputInfo')}: {targetW} × {targetH} px
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -279,7 +281,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               disabled={isExporting}
               className="px-4 py-2 rounded-lg text-xs font-medium text-gray-400 hover:text-white transition-colors"
             >
-              Cancelar
+              {t('cancel')}
             </button>
             <button
               onClick={handleExport}
@@ -289,12 +291,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({
               {isExporting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Renderizando...</span>
+                  <span>{t('rendering')}</span>
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  <span>Descargar Foto 360</span>
+                  <span>{t('download360Photo')}</span>
                 </>
               )}
             </button>

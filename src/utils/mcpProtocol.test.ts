@@ -65,6 +65,7 @@ describe('MCP Server Protocol and Frame Tests', () => {
       'SET_COLORS',
       'SET_NADIR',
       'SET_VIEW_MODE',
+      'SET_LANGUAGE',
       'TRIGGER_EXPORT',
       'TRIGGER_REFRAME',
     ];

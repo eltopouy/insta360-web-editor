@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from '../i18n/I18nContext';
 import { Camera, Download, Globe2, Sparkles } from 'lucide-react';
 
 interface ReframeToolProps {
@@ -12,14 +13,15 @@ export const ReframeTool: React.FC<ReframeToolProps> = ({
   is3dViewActive,
   onSwitchTo3dView,
 }) => {
+  const { t } = useTranslation();
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '9:16' | '1:1' | '4:3'>('16:9');
   const [fov, setFov] = useState(75);
 
   const presets = [
-    { label: 'Tiny Planet', fov: 150, desc: 'Efecto planeta esférico' },
-    { label: 'Gran Angular', fov: 110, desc: 'Amplio campo de visión' },
-    { label: 'Natural / 50mm', fov: 65, desc: 'Perspectiva del ojo humano' },
-    { label: 'Teleobjetivo', fov: 40, desc: 'Acercamiento sin distorsión' },
+    { label: t('presetTinyPlanet'), fov: 150, desc: t('presetTinyPlanetDesc') },
+    { label: t('presetWideAngle'), fov: 110, desc: t('presetWideAngleDesc') },
+    { label: t('presetNatural50mm'), fov: 65, desc: t('presetNatural50mmDesc') },
+    { label: t('presetTelephoto'), fov: 40, desc: t('presetTelephotoDesc') },
   ];
 
   return (
@@ -27,29 +29,29 @@ export const ReframeTool: React.FC<ReframeToolProps> = ({
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-studio-accent flex items-center gap-1.5">
           <Camera className="w-4 h-4" />
-          Reencuadre 2D (Foto Plana)
+          {t('reframeTitle')}
         </h3>
       </div>
 
       <p className="text-[11px] text-gray-400 leading-relaxed">
-        Extrae fotografías tradicionales de alta resolución desde la foto 360 con la dirección y campo de visión que desees.
+        {t('reframeDescription')}
       </p>
 
       {!is3dViewActive && (
         <div className="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-lg flex items-center justify-between">
-          <span className="text-xs text-amber-300">Se recomienda usar la vista 3D Esfera para encuadrar</span>
+          <span className="text-xs text-amber-300">{t('reframeRecommend3d')}</span>
           <button
             onClick={onSwitchTo3dView}
             className="text-xs bg-amber-500 hover:bg-amber-400 text-black font-semibold px-2 py-1 rounded"
           >
-            Activar 3D
+            {t('reframeActivate3d')}
           </button>
         </div>
       )}
 
       {/* Aspect Ratio */}
       <div className="space-y-2 bg-studio-800/60 p-3 rounded-lg border border-white/5">
-        <label className="text-xs font-semibold text-gray-200">Formato / Relación de Aspecto</label>
+        <label className="text-xs font-semibold text-gray-200">{t('reframeAspectRatio')}</label>
         <div className="grid grid-cols-4 gap-1.5">
           {(['16:9', '9:16', '1:1', '4:3'] as const).map((aspect) => (
             <button
@@ -63,7 +65,7 @@ export const ReframeTool: React.FC<ReframeToolProps> = ({
             >
               <span>{aspect}</span>
               <span className="text-[9px] opacity-70">
-                {aspect === '16:9' ? 'YouTube' : aspect === '9:16' ? 'Reels' : aspect === '1:1' ? 'Post' : 'Foto'}
+                {aspect === '16:9' ? 'YouTube' : aspect === '9:16' ? 'Reels' : aspect === '1:1' ? 'Post' : 'Photo'}
               </span>
             </button>
           ))}
@@ -73,7 +75,7 @@ export const ReframeTool: React.FC<ReframeToolProps> = ({
       {/* FOV */}
       <div className="space-y-3 bg-studio-800/60 p-3 rounded-lg border border-white/5">
         <div className="flex justify-between text-xs">
-          <span className="text-gray-200 font-semibold">Campo de Visión (FOV / Zoom)</span>
+          <span className="text-gray-200 font-semibold">{t('reframeFovZoom')}</span>
           <span className="font-mono text-studio-accent">{fov}°</span>
         </div>
         <input
@@ -111,7 +113,7 @@ export const ReframeTool: React.FC<ReframeToolProps> = ({
         className="w-full py-3 bg-studio-accent hover:bg-studio-accent/90 active:scale-[0.99] text-studio-900 font-bold rounded-lg text-xs transition-all shadow-lg shadow-studio-accent/20 flex items-center justify-center gap-2"
       >
         <Download className="w-4 h-4" />
-        <span>Capturar y Descargar Foto 2D ({aspectRatio})</span>
+        <span>{t('reframeDownloadButton')} ({aspectRatio})</span>
       </button>
     </div>
   );

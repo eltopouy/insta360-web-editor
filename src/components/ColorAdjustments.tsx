@@ -1,5 +1,6 @@
 import React from 'react';
 import { ColorAdjustments as ColorAdjustmentsType } from '../types';
+import { useTranslation } from '../i18n/I18nContext';
 import { Sliders, RotateCcw } from 'lucide-react';
 
 interface ColorAdjustmentsProps {
@@ -13,12 +14,14 @@ export const ColorAdjustments: React.FC<ColorAdjustmentsProps> = ({
   onChange,
   onReset,
 }) => {
+  const { t } = useTranslation();
+
   const fields = [
-    { id: 'exposure', label: 'Exposición', min: -100, max: 100 },
-    { id: 'brightness', label: 'Brillo', min: -100, max: 100 },
-    { id: 'contrast', label: 'Contraste', min: -100, max: 100 },
-    { id: 'saturation', label: 'Saturación', min: -100, max: 100 },
-    { id: 'warmth', label: 'Calidez / Temperatura', min: -100, max: 100 },
+    { id: 'exposure', label: t('colorExposure'), min: -100, max: 100 },
+    { id: 'brightness', label: t('colorBrightness'), min: -100, max: 100 },
+    { id: 'contrast', label: t('colorContrast'), min: -100, max: 100 },
+    { id: 'saturation', label: t('colorSaturation'), min: -100, max: 100 },
+    { id: 'warmth', label: t('colorWarmth'), min: -100, max: 100 },
   ] as const;
 
   return (
@@ -26,15 +29,15 @@ export const ColorAdjustments: React.FC<ColorAdjustmentsProps> = ({
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-studio-accent flex items-center gap-1.5">
           <Sliders className="w-4 h-4" />
-          Ajustes de Color & Imagen
+          {t('colorTitle')}
         </h3>
         <button
           onClick={onReset}
           className="text-[11px] text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
-          title="Restablecer ajustes de color"
+          title={t('resetButton')}
         >
           <RotateCcw className="w-3 h-3" />
-          Restablecer
+          {t('resetButton')}
         </button>
       </div>
 

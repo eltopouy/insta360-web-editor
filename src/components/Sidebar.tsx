@@ -8,6 +8,7 @@ import { OrientationControls } from './OrientationControls';
 import { NadirPatchControls } from './NadirPatchControls';
 import { ColorAdjustments } from './ColorAdjustments';
 import { ReframeTool } from './ReframeTool';
+import { useTranslation } from '../i18n/I18nContext';
 import { Camera, CircleDot, Rotate3d, Sliders } from 'lucide-react';
 
 interface SidebarProps {
@@ -42,13 +43,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   is3dViewActive,
   onSwitchTo3dView,
 }) => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<'orient' | 'nadir' | 'color' | 'reframe'>('orient');
 
   const tabs = [
-    { id: 'orient', label: 'Orientación', icon: Rotate3d },
-    { id: 'nadir', label: 'Trípode', icon: CircleDot },
-    { id: 'color', label: 'Color', icon: Sliders },
-    { id: 'reframe', label: 'Reencuadre', icon: Camera },
+    { id: 'orient', label: t('tabOrientation'), icon: Rotate3d },
+    { id: 'nadir', label: t('tabNadir'), icon: CircleDot },
+    { id: 'color', label: t('tabColor'), icon: Sliders },
+    { id: 'reframe', label: t('tabReframe'), icon: Camera },
   ] as const;
 
   return (

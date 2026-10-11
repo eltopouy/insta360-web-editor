@@ -7,6 +7,7 @@ import {
   EquirectangularVertexShader,
   createShaderRotationMatrix,
 } from '../utils/equirectangularShader';
+import { useTranslation } from '../i18n/I18nContext';
 
 interface EquirectangularPreviewProps {
   imageSrc: string;
@@ -26,6 +27,7 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
   onYawChange,
   onPitchChange,
 }) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -208,22 +210,22 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
             <div className="w-1.5 h-1.5 bg-studio-accent rounded-full" />
           </div>
           <span className="absolute -translate-y-6 text-[10px] font-mono text-studio-accent bg-studio-900/80 px-1 rounded border border-studio-accent/30">
-            CENTRO (FRENTE)
+            {t('centerFront')}
           </span>
         </div>
 
         {/* Cardinal labels across the top */}
         <div className="pointer-events-none absolute top-2 left-0 right-0 flex justify-between px-4 text-[10px] font-mono text-gray-400">
-          <span>SUR (-180°)</span>
-          <span className="text-yellow-400">OESTE (-90°)</span>
-          <span className="text-studio-accent font-bold">NORTE (0°)</span>
-          <span className="text-cyan-400">ESTE (+90°)</span>
-          <span>SUR (+180°)</span>
+          <span>{t('cardinalSouth')} (-180°)</span>
+          <span className="text-yellow-400">{t('cardinalWest')} (-90°)</span>
+          <span className="text-studio-accent font-bold">{t('cardinalNorth')} (0°)</span>
+          <span className="text-cyan-400">{t('cardinalEast')} (+90°)</span>
+          <span>{t('cardinalSouth')} (+180°)</span>
         </div>
 
         {/* Drag badge helper */}
         <div className="pointer-events-none absolute bottom-2 right-2 bg-studio-900/80 backdrop-blur-md border border-white/10 px-2.5 py-1 rounded text-[11px] font-mono text-gray-300">
-          Arrastra para desplazar el centro
+          {t('dragToShiftCenter')}
         </div>
       </div>
     </div>

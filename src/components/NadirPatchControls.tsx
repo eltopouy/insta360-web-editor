@@ -1,5 +1,6 @@
 import React from 'react';
 import { NadirPatchConfig } from '../types';
+import { useTranslation } from '../i18n/I18nContext';
 import { CircleDot, Sparkles } from 'lucide-react';
 
 interface NadirPatchControlsProps {
@@ -8,12 +9,14 @@ interface NadirPatchControlsProps {
 }
 
 export const NadirPatchControls: React.FC<NadirPatchControlsProps> = ({ config, onChange }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-studio-accent flex items-center gap-1.5">
           <CircleDot className="w-4 h-4" />
-          Parche de Nadir (Ocultar Trípode)
+          {t('nadirTitle')}
         </h3>
         <label htmlFor="nadir-toggle" className="relative inline-flex items-center cursor-pointer">
           <input
@@ -23,26 +26,26 @@ export const NadirPatchControls: React.FC<NadirPatchControlsProps> = ({ config, 
             checked={config.enabled}
             onChange={(e) => onChange({ enabled: e.target.checked })}
             className="sr-only peer"
-            aria-label="Activar parche de nadir"
+            aria-label={t('nadirEnableAria')}
           />
           <div className="w-9 h-5 bg-studio-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-studio-accent"></div>
         </label>
       </div>
 
       <p className="text-[11px] text-gray-400 leading-relaxed">
-        Elimina o difumina automáticamente el trípode, palo selfie o sombras visibles en el polo inferior (-90°).
+        {t('nadirDescription')}
       </p>
 
       {config.enabled && (
         <div className="space-y-4 bg-studio-800/60 p-3 rounded-lg border border-white/5 animate-fadeIn">
           {/* Patch Mode */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-gray-300">Modo de Cobertura</label>
+            <label className="text-xs font-semibold text-gray-300">{t('nadirCoverageMode')}</label>
             <div className="grid grid-cols-3 gap-1.5">
               {[
-                { id: 'blur', label: 'Difuminar' },
-                { id: 'mirror', label: 'Espejo' },
-                { id: 'color', label: 'Color' },
+                { id: 'blur', label: t('nadirModeBlur') },
+                { id: 'mirror', label: t('nadirModeMirror') },
+                { id: 'color', label: t('nadirModeColor') },
               ].map((m) => (
                 <button
                   key={m.id}
@@ -62,7 +65,7 @@ export const NadirPatchControls: React.FC<NadirPatchControlsProps> = ({ config, 
           {/* Radius */}
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs">
-              <label htmlFor="nadir-radius" className="text-gray-300">Radio del Parche</label>
+              <label htmlFor="nadir-radius" className="text-gray-300">{t('nadirRadius')}</label>
               <span className="font-mono text-studio-accent">{config.radius}°</span>
             </div>
             <input
@@ -81,7 +84,7 @@ export const NadirPatchControls: React.FC<NadirPatchControlsProps> = ({ config, 
           {/* Feathering */}
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs">
-              <label htmlFor="nadir-feather" className="text-gray-300">Suavizado de Bordes (Feather)</label>
+              <label htmlFor="nadir-feather" className="text-gray-300">{t('nadirFeather')}</label>
               <span className="font-mono text-studio-accent">{config.feather}%</span>
             </div>
             <input
@@ -100,7 +103,7 @@ export const NadirPatchControls: React.FC<NadirPatchControlsProps> = ({ config, 
           {/* Color Picker if color mode */}
           {config.mode === 'color' && (
             <div className="flex items-center justify-between text-xs pt-2 border-t border-white/10">
-              <label htmlFor="nadir-color" className="text-gray-300">Color de relleno</label>
+              <label htmlFor="nadir-color" className="text-gray-300">{t('nadirFillColor')}</label>
               <div className="flex items-center gap-2">
                 <input
                   id="nadir-color"

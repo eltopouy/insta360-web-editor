@@ -34,6 +34,7 @@ Al conectarse, verás en la barra superior del editor el indicador **`MCP IA: CO
 | `reset_colors` | *Ninguno* | Restablece todos los parámetros de color a valores neutros (0). |
 | `configure_nadir_patch` | `enabled`, `radius`, `feather`, `mode`, `color` | Oculta el trípode/soporte en la base del suelo esférico (`blur`, `mirror`, o `color`). |
 | `set_view_mode` | `mode` (`"3d"`, `"equirectangular"`, `"split"`) | Cambia entre vista esférica 3D, plano 2:1 o vista dividida sincronizada. |
+| `set_language` | `language` (`"es"`, `"en"`, `"zh"`) | Cambia el idioma nativo de la interfaz web en vivo (Español, English, 简体中文). |
 | `trigger_reframe_snapshot` | `aspectRatio` (`"16:9"`, `"9:16"`, `"1:1"`, `"4:3"`), `fov` | Toma y descarga una foto fija 2D encuadrada desde el punto de vista actual. |
 | `open_export_modal` | *Ninguno* | Abre la ventana de exportación equirrectangular completa con metadatos GPano XMP. |
 

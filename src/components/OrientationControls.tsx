@@ -1,5 +1,6 @@
 import React from 'react';
 import { Orientation } from '../types';
+import { useTranslation } from '../i18n/I18nContext';
 import { Compass, Rotate3d, RotateCcw, ShieldCheck } from 'lucide-react';
 
 interface OrientationControlsProps {
@@ -15,20 +16,22 @@ export const OrientationControls: React.FC<OrientationControlsProps> = ({
   onReset,
   onAutoLevel,
 }) => {
+  const { t } = useTranslation();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-studio-accent flex items-center gap-1.5">
           <Rotate3d className="w-4 h-4" />
-          Punto de Vista & Orientación
+          {t('orientationTitle')}
         </h3>
         <button
           onClick={onReset}
           className="text-[11px] text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
-          title="Restablecer rotación a 0°"
+          title={t('resetButton')}
         >
           <RotateCcw className="w-3 h-3" />
-          Restablecer
+          {t('resetButton')}
         </button>
       </div>
 
@@ -37,7 +40,7 @@ export const OrientationControls: React.FC<OrientationControlsProps> = ({
         <div className="flex items-center justify-between text-xs">
           <label htmlFor="yaw-number" className="font-semibold text-gray-200 flex items-center gap-1.5">
             <Compass className="w-3.5 h-3.5 text-studio-accent" />
-            <span>Yaw (Centro Principal)</span>
+            <span>{t('yawLabel')}</span>
           </label>
           <div className="flex items-center gap-1">
             <input
@@ -66,9 +69,9 @@ export const OrientationControls: React.FC<OrientationControlsProps> = ({
           className="w-full"
         />
         <div className="flex justify-between text-[10px] text-gray-400 font-mono pt-0.5">
-          <span>-180° (Sur)</span>
-          <span className="text-studio-accent">0° (Norte)</span>
-          <span>+180° (Sur)</span>
+          <span>-180° ({t('yawSouth')})</span>
+          <span className="text-studio-accent">{t('yawNorth')}</span>
+          <span>+180° ({t('yawSouth')})</span>
         </div>
         {/* Quick Yaw shifts */}
         <div className="flex gap-1.5 pt-1">
@@ -92,7 +95,7 @@ export const OrientationControls: React.FC<OrientationControlsProps> = ({
       <div className="space-y-2 bg-studio-800/60 p-3 rounded-lg border border-white/5">
         <div className="flex items-center justify-between text-xs">
           <label htmlFor="pitch-number" className="font-semibold text-gray-200">
-            <span>Pitch (Inclinación vertical)</span>
+            <span>{t('pitchLabel')}</span>
           </label>
           <div className="flex items-center gap-1">
             <input
@@ -121,9 +124,9 @@ export const OrientationControls: React.FC<OrientationControlsProps> = ({
           className="w-full"
         />
         <div className="flex justify-between text-[10px] text-gray-400 font-mono pt-0.5">
-          <span>-90° (Suelo)</span>
-          <span>0° (Nivel)</span>
-          <span>+90° (Cenit)</span>
+          <span>{t('pitchGround')}</span>
+          <span>{t('pitchLevel')}</span>
+          <span>{t('pitchZenith')}</span>
         </div>
       </div>
 
@@ -131,7 +134,7 @@ export const OrientationControls: React.FC<OrientationControlsProps> = ({
       <div className="space-y-2 bg-studio-800/60 p-3 rounded-lg border border-white/5">
         <div className="flex items-center justify-between text-xs">
           <label htmlFor="roll-number" className="font-semibold text-gray-200">
-            <span>Roll (Nivelar horizonte)</span>
+            <span>{t('rollLabel')}</span>
           </label>
           <div className="flex items-center gap-1">
             <input
@@ -161,7 +164,7 @@ export const OrientationControls: React.FC<OrientationControlsProps> = ({
         />
         <div className="flex justify-between text-[10px] text-gray-400 font-mono pt-0.5">
           <span>-45°</span>
-          <span className="text-studio-accent">0° (Recto)</span>
+          <span className="text-studio-accent">{t('rollLevel')}</span>
           <span>+45°</span>
         </div>
       </div>
@@ -172,7 +175,7 @@ export const OrientationControls: React.FC<OrientationControlsProps> = ({
         className="w-full py-2 bg-studio-700 hover:bg-studio-600 border border-white/10 rounded-lg text-xs font-medium text-gray-200 hover:text-white transition-all flex items-center justify-center gap-2"
       >
         <ShieldCheck className="w-4 h-4 text-studio-accent" />
-        Nivelar Horizonte (Pitch = 0, Roll = 0)
+        {t('autoLevelButton')}
       </button>
     </div>
   );

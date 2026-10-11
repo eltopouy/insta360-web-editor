@@ -7,9 +7,11 @@ import { Header } from './components/Header';
 import { Sidebar } from './components/Sidebar';
 import { ExportModal } from './components/ExportModal';
 import { useMcpBridge } from './hooks/useMcpBridge';
+import { useTranslation } from './i18n/I18nContext';
 import { UploadCloud } from 'lucide-react';
 
 export const App: React.FC = () => {
+  const { t, language, setLanguage } = useTranslation();
   // State
   const [imageSrc, setImageSrc] = useState<string>('');
   const [fileName, setFileName] = useState<string>('demo_insta360_panorama.jpg');
@@ -175,10 +177,12 @@ export const App: React.FC = () => {
     nadirPatch,
     viewMode,
     fileName,
+    language,
     onUpdateOrientation: handleOrientationChange,
     onUpdateColors: handleColorChange,
     onUpdateNadir: handleNadirChange,
     onUpdateViewMode: setViewMode,
+    onUpdateLanguage: setLanguage,
     onResetOrientation: handleResetOrientation,
     onAutoLevel: handleAutoLevel,
     onTriggerExport: () => setIsExportModalOpen(true),
@@ -221,7 +225,7 @@ export const App: React.FC = () => {
                 <div className={`relative h-full ${viewMode === 'split' ? 'w-1/2 border-r border-white/10' : 'w-full'}`}>
                   {viewMode === 'split' && (
                     <div className="absolute top-2 left-2 z-20 bg-studio-900/80 px-2 py-0.5 rounded text-[10px] font-mono text-studio-accent border border-white/10">
-                      VISTA 3D INTERACTIVA
+                      {t('interactive3dView')}
                     </div>
                   )}
                   <Viewer360
@@ -240,7 +244,7 @@ export const App: React.FC = () => {
                 <div className={`relative h-full ${viewMode === 'split' ? 'w-1/2' : 'w-full'}`}>
                   {viewMode === 'split' && (
                     <div className="absolute top-2 left-2 z-20 bg-studio-900/80 px-2 py-0.5 rounded text-[10px] font-mono text-cyan-400 border border-white/10">
-                      PLANO EQUIRRECTANGULAR (2:1)
+                      {t('equirectangularView')}
                     </div>
                   )}
                   <EquirectangularPreview
@@ -258,7 +262,7 @@ export const App: React.FC = () => {
           ) : (
             <div className="w-full h-full flex flex-col items-center justify-center text-gray-500">
               <UploadCloud className="w-16 h-16 text-gray-600 mb-3" />
-              <p className="text-sm">Arrastra y suelta tu foto 360 aquí</p>
+              <p className="text-sm">{t('dragDropPrompt')}</p>
             </div>
           )}
         </main>
@@ -284,8 +288,8 @@ export const App: React.FC = () => {
       {isDraggingFile && (
         <div className="absolute inset-0 z-50 bg-studio-900/90 backdrop-blur-md flex flex-col items-center justify-center border-4 border-dashed border-studio-accent m-4 rounded-2xl animate-pulse pointer-events-none">
           <UploadCloud className="w-20 h-20 text-studio-accent mb-4" />
-          <h2 className="text-2xl font-bold text-white">Suelta tu foto 360 aquí</h2>
-          <p className="text-sm text-gray-300 mt-2">Compatible con fotos cosidas de Insta360 (JPG, PNG)</p>
+          <h2 className="text-2xl font-bold text-white">{t('dragDropOverlayTitle')}</h2>
+          <p className="text-sm text-gray-300 mt-2">{t('dragDropOverlaySubtitle')}</p>
         </div>
       )}
 

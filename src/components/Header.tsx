@@ -1,5 +1,7 @@
 import React, { useRef } from 'react';
 import { ViewMode } from '../types';
+import { useTranslation } from '../i18n/I18nContext';
+import { LanguageSelector } from './LanguageSelector';
 import {
   Bot,
   Camera,
@@ -32,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
   fileName,
   isMcpConnected = false,
 }) => {
+  const { t } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,9 +53,9 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-bold text-sm tracking-tight text-white">360 Studio Web</span>
+              <span className="font-bold text-sm tracking-tight text-white">{t('appTitle')}</span>
               <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 bg-studio-accent/20 text-studio-accent rounded border border-studio-accent/30">
-                INSTA360
+                {t('badgeInsta360')}
               </span>
             </div>
             <div className="text-[11px] text-gray-400 font-mono truncate max-w-[200px]" title={fileName}>
@@ -63,16 +66,12 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* MCP AI Status Badge */}
         <div
-          className={`hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono border transition-all ${
+          className={`hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-mono border transition-all ${
             isMcpConnected
               ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.15)]'
               : 'bg-studio-900/40 border-white/5 text-gray-400'
           }`}
-          title={
-            isMcpConnected
-              ? 'Conector MCP IA Activo: Tu asistente IA puede controlar la vista 360 en vivo (ws://127.0.0.1:5174)'
-              : 'Conector MCP IA en espera de conexión local (ws://127.0.0.1:5174)'
-          }
+          title={isMcpConnected ? t('mcpTooltipConnected') : t('mcpTooltipOffline')}
         >
           <Bot className={`w-3.5 h-3.5 ${isMcpConnected ? 'text-emerald-400' : 'text-gray-500'}`} />
           <span
@@ -81,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           />
           <span className="font-semibold">
-            MCP IA: {isMcpConnected ? 'CONECTADO' : 'OFFLINE'}
+            {isMcpConnected ? t('mcpConnected') : t('mcpOffline')}
           </span>
         </div>
       </div>
@@ -95,10 +94,10 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'bg-studio-700 text-white shadow-sm font-semibold'
               : 'text-gray-400 hover:text-white'
           }`}
-          title="Vista 3D Interactiva (Esfera)"
+          title={t('view3dSphere')}
         >
           <Eye className="w-3.5 h-3.5 text-studio-accent" />
-          <span>3D Esfera</span>
+          <span>{t('view3dSphere')}</span>
         </button>
 
         <button
@@ -108,10 +107,10 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'bg-studio-700 text-white shadow-sm font-semibold'
               : 'text-gray-400 hover:text-white'
           }`}
-          title="Vista Equirrectangular Plana (2:1)"
+          title={t('view2dEqui')}
         >
           <Map className="w-3.5 h-3.5 text-cyan-400" />
-          <span>Plano 2:1</span>
+          <span>{t('view2dEqui')}</span>
         </button>
 
         <button
@@ -121,19 +120,19 @@ export const Header: React.FC<HeaderProps> = ({
               ? 'bg-studio-700 text-white shadow-sm font-semibold'
               : 'text-gray-400 hover:text-white'
           }`}
-          title="Vista Dividida (Ambas pantallas)"
+          title={t('viewSplit')}
         >
           <Columns className="w-3.5 h-3.5 text-amber-400" />
-          <span>Dividida</span>
+          <span>{t('viewSplit')}</span>
         </button>
       </div>
 
-      {/* Actions */}
+      {/* Actions & Language Selector */}
       <div className="flex items-center gap-2">
         <input
           id="file-upload-input"
           name="file-upload-input"
-          aria-label="Subir foto 360"
+          aria-label={t('upload360')}
           ref={fileInputRef}
           type="file"
           accept="image/*,.insp"
@@ -146,25 +145,28 @@ export const Header: React.FC<HeaderProps> = ({
           className="flex items-center gap-1.5 bg-studio-700 hover:bg-studio-600 text-gray-200 hover:text-white border border-white/10 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
         >
           <Upload className="w-3.5 h-3.5 text-studio-accent" />
-          <span>Subir Foto 360</span>
+          <span className="hidden sm:inline">{t('upload360')}</span>
         </button>
 
         <button
           onClick={onLoadDemo}
           className="flex items-center gap-1.5 bg-studio-700/60 hover:bg-studio-700 text-gray-300 hover:text-white border border-white/5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all"
-          title="Cargar panorama de prueba"
+          title={t('loadDemo')}
         >
           <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-          <span>Demo</span>
+          <span className="hidden sm:inline">{t('loadDemo')}</span>
         </button>
 
         <button
           onClick={onOpenExport}
-          className="flex items-center gap-1.5 bg-studio-accent hover:bg-studio-accent/90 text-studio-900 px-4 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-studio-accent/20 active:scale-95"
+          className="flex items-center gap-1.5 bg-studio-accent hover:bg-studio-accent/90 text-studio-900 px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all shadow-md shadow-studio-accent/20 active:scale-95"
         >
           <Download className="w-3.5 h-3.5" />
-          <span>Exportar 360</span>
+          <span>{t('export360')}</span>
         </button>
+
+        {/* Language Selector Dropdown */}
+        <LanguageSelector />
       </div>
     </header>
   );

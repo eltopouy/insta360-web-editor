@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Orientation, ColorAdjustments, NadirPatchConfig } from '../types';
 import { degToRad } from '../utils/sphericalMath';
+import { useTranslation } from '../i18n/I18nContext';
 import { Compass, Crosshair, Eye, RotateCcw } from 'lucide-react';
 
 interface Viewer360Props {
@@ -99,6 +100,7 @@ export const Viewer360: React.FC<Viewer360Props> = ({
   onSetCurrentViewAsCenter,
   viewerRef,
 }) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
@@ -383,10 +385,10 @@ export const Viewer360: React.FC<Viewer360Props> = ({
 
           <div className="absolute left-6 right-6 top-1/2 h-px border-t border-dashed border-studio-accent/40 flex justify-between items-center">
             <span className="text-[10px] font-mono text-studio-accent/70 bg-studio-900/80 px-1 rounded -translate-y-1/2">
-              HORIZONTE 0°
+              {t('horizon0')}
             </span>
             <span className="text-[10px] font-mono text-studio-accent/70 bg-studio-900/80 px-1 rounded -translate-y-1/2">
-              NIVEL
+              {t('level')}
             </span>
           </div>
         </div>
@@ -396,28 +398,28 @@ export const Viewer360: React.FC<Viewer360Props> = ({
       <div className="absolute top-4 left-4 z-10 flex items-center gap-3 bg-studio-900/80 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-md text-xs font-mono text-gray-300 shadow-lg">
         <div className="flex items-center gap-1.5 text-studio-accent font-semibold">
           <Compass className="w-4 h-4" />
-          <span>DIR: {Math.round(cameraLon)}°</span>
+          <span>{t('dirLabel')}: {Math.round(cameraLon)}°</span>
         </div>
         <div className="h-3 w-px bg-white/20" />
-        <span>ELEV: {Math.round(cameraLat)}°</span>
+        <span>{t('elevLabel')}: {Math.round(cameraLat)}°</span>
         <div className="h-3 w-px bg-white/20" />
-        <span>FOV: {Math.round(cameraFov)}°</span>
+        <span>{t('fovLabel')}: {Math.round(cameraFov)}°</span>
       </div>
 
       {/* Floating Viewport Quick Controls */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
         <button
           onClick={handleSetCurrentViewAsCenter}
-          title="Fijar esta dirección como el nuevo centro del panorama 360"
+          title={t('setAsFrontTitle')}
           className="flex items-center gap-1.5 bg-studio-accent/20 hover:bg-studio-accent/30 text-studio-accent border border-studio-accent/40 px-3 py-1.5 rounded-md text-xs font-medium transition-all shadow-md active:scale-95"
         >
           <Crosshair className="w-3.5 h-3.5" />
-          <span>Fijar como Frente</span>
+          <span>{t('setAsFront')}</span>
         </button>
 
         <button
           onClick={() => setShowGuides(!showGuides)}
-          title="Mostrar/Ocultar guías de horizonte y cruz central"
+          title={t('toggleGuidesTitle')}
           className={`p-2 rounded-md border text-xs transition-colors backdrop-blur-md ${
             showGuides
               ? 'bg-white/15 border-white/30 text-white'
@@ -429,7 +431,7 @@ export const Viewer360: React.FC<Viewer360Props> = ({
 
         <button
           onClick={handleResetCamera}
-          title="Restablecer posición de cámara"
+          title={t('resetCameraTitle')}
           className="p-2 rounded-md border border-white/10 bg-studio-900/80 hover:bg-white/10 text-gray-400 hover:text-white transition-colors backdrop-blur-md"
         >
           <RotateCcw className="w-4 h-4" />
@@ -437,7 +439,7 @@ export const Viewer360: React.FC<Viewer360Props> = ({
       </div>
 
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none text-center bg-studio-900/70 backdrop-blur-md border border-white/10 px-4 py-1.5 rounded-full text-[11px] text-gray-400">
-        Arrastra con el ratón para mirar en 360° • Rueda para zoom
+        {t('mouseLookHelp')}
       </div>
     </div>
   );
