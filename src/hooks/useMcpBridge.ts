@@ -4,18 +4,21 @@ import {
   ColorAdjustments,
   NadirPatchConfig,
   ViewMode,
+  StitchingConfig,
 } from '../types/index.ts';
 
 interface McpBridgeProps {
   orientation: Orientation;
   colorAdjustments: ColorAdjustments;
   nadirPatch: NadirPatchConfig;
+  stitching?: StitchingConfig;
   viewMode: ViewMode;
   fileName: string;
   language?: string;
   onUpdateOrientation: (orient: Partial<Orientation>) => void;
   onUpdateColors: (colors: Partial<ColorAdjustments>) => void;
   onUpdateNadir: (nadir: Partial<NadirPatchConfig>) => void;
+  onUpdateStitching?: (stitching: Partial<StitchingConfig>) => void;
   onUpdateViewMode: (mode: ViewMode) => void;
   onUpdateLanguage?: (lang: any) => void;
   onResetOrientation: () => void;
@@ -28,12 +31,14 @@ export function useMcpBridge({
   orientation,
   colorAdjustments,
   nadirPatch,
+  stitching,
   viewMode,
   fileName,
   language,
   onUpdateOrientation,
   onUpdateColors,
   onUpdateNadir,
+  onUpdateStitching,
   onUpdateViewMode,
   onUpdateLanguage,
   onResetOrientation,
@@ -62,6 +67,7 @@ export function useMcpBridge({
                 orientation,
                 colorAdjustments,
                 nadirPatch,
+                stitching,
                 viewMode,
                 fileName,
                 language,
@@ -88,6 +94,11 @@ export function useMcpBridge({
                 break;
               case 'SET_NADIR':
                 onUpdateNadir(msg.data);
+                break;
+              case 'SET_STITCHING':
+                if (onUpdateStitching && msg.data) {
+                  onUpdateStitching(msg.data);
+                }
                 break;
               case 'SET_VIEW_MODE':
                 onUpdateViewMode(msg.data);
@@ -146,6 +157,7 @@ export function useMcpBridge({
             orientation,
             colorAdjustments,
             nadirPatch,
+            stitching,
             viewMode,
             fileName,
             language,
@@ -153,7 +165,7 @@ export function useMcpBridge({
         })
       );
     }
-  }, [orientation, colorAdjustments, nadirPatch, viewMode, fileName, language]);
+  }, [orientation, colorAdjustments, nadirPatch, stitching, viewMode, fileName, language]);
 
   return { isConnected };
 }

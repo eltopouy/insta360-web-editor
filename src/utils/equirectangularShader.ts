@@ -1,6 +1,17 @@
 import * as THREE from 'three';
-import type { Orientation, ColorAdjustments, NadirPatchConfig } from '../types/index.ts';
+import type { Orientation, StitchingConfig } from '../types/index.ts';
 import { degToRad } from './sphericalMath.ts';
+
+export const DEFAULT_STITCHING_CONFIG: StitchingConfig = {
+  projection: 'equirectangular',
+  lensFov: 200,        // 200° native FOV for Insta360 ONE X/X2/X3/X4 fisheye lenses
+  blendAngle: 10,      // 10° overlap feather blend
+  centerOffsetX1: 0,   // Front lens micro X offset
+  centerOffsetY1: 0,   // Front lens micro Y offset
+  centerOffsetX2: 0,   // Rear lens micro X offset
+  centerOffsetY2: 0,   // Rear lens micro Y offset
+  radiusScale: 1.0,    // Circle radius scale
+};
 
 export const EquirectangularVertexShader = /* glsl */ `
   varying vec2 vUv;
@@ -17,6 +28,14 @@ export const EquirectangularFragmentShader = /* glsl */ `
   uniform sampler2D tSource;
   uniform mat3 uRotationMatrix; // Rotation matrix for Yaw, Pitch, Roll
   
+  // Optical Stitching Uniforms
+  uniform int uInputProjection; // 0 = Equirectangular, 1 = Insta360 Dual-Fisheye
+  uniform float uLensFovRad;    // Lens Field of View in radians (e.g. 200 deg)
+  uniform float uBlendAngleRad; // Overlap feather zone in radians (e.g. 10 deg)
+  uniform vec2 uCenterOffset1;  // Front lens center offset (u, v)
+  uniform vec2 uCenterOffset2;  // Rear lens center offset (u, v)
+  uniform float uRadiusScale;   // Lens circle radius scale
+
   // Color adjustments
   uniform float uExposure;   // -1.0 to 1.0
   uniform float uBrightness; // -1.0 to 1.0
@@ -56,7 +75,7 @@ export const EquirectangularFragmentShader = /* glsl */ `
     float lat = (vUv.y - 0.5) * PI;
 
     // 2. Spherical to 3D unit direction vector
-    // Standard Three.js coordinates: Y is up, -Z is forward, X is right
+    // Standard coordinates: Y is up, -Z is forward, X is right
     float cosLat = cos(lat);
     vec3 dir = vec3(
       cosLat * sin(lon),
@@ -68,58 +87,117 @@ export const EquirectangularFragmentShader = /* glsl */ `
     vec3 srcDir = uRotationMatrix * dir;
     srcDir = normalize(srcDir);
 
-    // 4. Convert rotated 3D vector back to source UV
-    float srcLat = asin(clamp(srcDir.y, -1.0, 1.0));
-    float srcLon = atan(srcDir.x, -srcDir.z);
+    vec4 color;
 
-    vec2 srcUv = vec2(
-      srcLon / TWO_PI + 0.5,
-      srcLat / PI + 0.5
-    );
+    // 4. Sample Texture according to projection type
+    if (uInputProjection == 1) {
+      // -------------------------------------------------------------
+      // INSTA360 DUAL-FISHEYE OPTICAL STITCHING ENGINE
+      // -------------------------------------------------------------
+      float thetaMax = uLensFovRad * 0.5;
 
-    // Wrap horizontally seamlessly
-    srcUv.x = fract(srcUv.x);
-    srcUv.y = clamp(srcUv.y, 0.0001, 0.9999);
+      // Front Lens (Facing -Z)
+      // theta1 is angle between ray and front optical axis (0, 0, -1)
+      float cosTheta1 = clamp(-srcDir.z, -1.0, 1.0);
+      float theta1 = acos(cosTheta1);
 
-    // 5. Sample texture
-    vec4 color = texture2D(tSource, srcUv);
+      // Rear Lens (Facing +Z)
+      // theta2 is angle between ray and rear optical axis (0, 0, 1)
+      float cosTheta2 = clamp(srcDir.z, -1.0, 1.0);
+      float theta2 = acos(cosTheta2);
 
-    // 6. Nadir Patch (Bottom Pole trip-pod removal)
+      // Radii in UV coordinates for a 2:1 side-by-side dual-fisheye frame
+      // Width = 2 * Height. Height spans [0..1] in UV Y.
+      // So circle radius is 0.5 in Y, and 0.25 in X.
+      float rx = 0.25 * uRadiusScale;
+      float ry = 0.50 * uRadiusScale;
+
+      // Front lens UV mapping (centered at 0.25, 0.5)
+      float d1 = length(srcDir.xy);
+      vec2 dir2D1 = (d1 > 1e-6) ? (srcDir.xy / d1) : vec2(0.0, 1.0);
+      float rho1 = theta1 / max(1e-4, thetaMax);
+      vec2 c1 = vec2(0.25 + uCenterOffset1.x, 0.5 + uCenterOffset1.y);
+      vec2 uv1 = c1 + rho1 * vec2(rx * dir2D1.x, ry * dir2D1.y);
+
+      // Rear lens UV mapping (centered at 0.75, 0.5)
+      // For rear camera facing +Z, camera right is -X
+      vec2 rearDirXY = vec2(-srcDir.x, srcDir.y);
+      float d2 = length(rearDirXY);
+      vec2 dir2D2 = (d2 > 1e-6) ? (rearDirXY / d2) : vec2(0.0, 1.0);
+      float rho2 = theta2 / max(1e-4, thetaMax);
+      vec2 c2 = vec2(0.75 + uCenterOffset2.x, 0.5 + uCenterOffset2.y);
+      vec2 uv2 = c2 + rho2 * vec2(rx * dir2D2.x, ry * dir2D2.y);
+
+      // Overlap blending between front and rear lenses
+      // deltaTheta > 0 means closer to front lens; deltaTheta < 0 means closer to rear lens
+      float deltaTheta = theta2 - theta1;
+      float halfBlend = max(0.001, uBlendAngleRad);
+      float w = smoothstep(-halfBlend, halfBlend, deltaTheta);
+
+      // Hard clamp if outside maximum optical FOV of either lens
+      if (theta1 > thetaMax) {
+        w = 0.0;
+      } else if (theta2 > thetaMax) {
+        w = 1.0;
+      }
+
+      if (w <= 0.001) {
+        color = texture2D(tSource, uv2);
+      } else if (w >= 0.999) {
+        color = texture2D(tSource, uv1);
+      } else {
+        vec4 col1 = texture2D(tSource, uv1);
+        vec4 col2 = texture2D(tSource, uv2);
+        color = mix(col2, col1, w);
+      }
+    } else {
+      // -------------------------------------------------------------
+      // EQUIRECTANGULAR 360 PROJECTION (SEAMLESS)
+      // -------------------------------------------------------------
+      float srcLat = asin(clamp(srcDir.y, -1.0, 1.0));
+      float srcLon = atan(srcDir.x, -srcDir.z);
+
+      // Without fract() and with RepeatWrapping, WebGL hardware derivative dFdx
+      // stays continuous and eliminates the blurry vertical seam line!
+      vec2 srcUv = vec2(
+        srcLon / TWO_PI + 0.5,
+        clamp(srcLat / PI + 0.5, 0.0001, 0.9999)
+      );
+
+      color = texture2D(tSource, srcUv);
+    }
+
+    // 5. Nadir Patch (Tripod / selfie-stick removal at South Pole)
+    float srcLatPole = asin(clamp(srcDir.y, -1.0, 1.0));
     if (uNadirEnabled) {
-      // Angle from South pole (where lat = -PI/2)
-      float southAngle = srcLat - (-PI * 0.5); // 0 at exact nadir pole, increases as we go up
+      float southAngle = srcLatPole - (-PI * 0.5);
       if (southAngle < uNadirRadius) {
         float featherDist = uNadirRadius * max(0.01, uNadirFeather);
         float t = smoothstep(uNadirRadius - featherDist, uNadirRadius, southAngle);
 
         vec3 patchColor = uNadirColor;
-        if (uNadirMode == 1) { // Blur mode (samples nearby ring)
-          vec2 ringUv = vec2(srcUv.x, (-PI * 0.5 + uNadirRadius) / PI + 0.5);
+        if (uNadirMode == 1) { // Blur mode
+          float ringLat = -PI * 0.5 + uNadirRadius;
+          float srcLon = atan(srcDir.x, -srcDir.z);
+          vec2 ringUv = vec2(srcLon / TWO_PI + 0.5, ringLat / PI + 0.5);
           patchColor = texture2D(tSource, ringUv).rgb;
         } else if (uNadirMode == 2) { // Mirror mode
           float mirroredLat = -PI * 0.5 + (uNadirRadius - southAngle) + uNadirRadius;
-          vec2 mirrorUv = vec2(srcUv.x, mirroredLat / PI + 0.5);
+          float srcLon = atan(srcDir.x, -srcDir.z);
+          vec2 mirrorUv = vec2(srcLon / TWO_PI + 0.5, clamp(mirroredLat / PI + 0.5, 0.0001, 0.9999));
           patchColor = texture2D(tSource, mirrorUv).rgb;
         }
         color.rgb = mix(patchColor, color.rgb, t);
       }
     }
 
-    // 7. Color Adjustments
-    // Exposure
+    // 6. Color Adjustments
     color.rgb *= pow(2.0, uExposure * 2.0);
-
-    // Brightness
     color.rgb += uBrightness * 0.5;
-
-    // Contrast
     color.rgb = (color.rgb - 0.5) * (1.0 + uContrast) + 0.5;
-
-    // Warmth / Temperature
     color.r += uWarmth * 0.08;
     color.b -= uWarmth * 0.08;
 
-    // Saturation
     vec3 hsv = rgb2hsv(color.rgb);
     hsv.y = clamp(hsv.y * (1.0 + uSaturation), 0.0, 1.0);
     color.rgb = hsv2rgb(hsv);
@@ -127,6 +205,68 @@ export const EquirectangularFragmentShader = /* glsl */ `
     gl_FragColor = vec4(clamp(color.rgb, 0.0, 1.0), 1.0);
   }
 `;
+
+/**
+ * Calculates UV coordinates and blend weight for dual fisheye lenses
+ * matching the GPU optical shader exactly.
+ */
+export function sampleDualFisheyeCoordinates(
+  dir: { x: number; y: number; z: number },
+  config: StitchingConfig
+): {
+  uv1: [number, number];
+  uv2: [number, number];
+  weightFront: number;
+} {
+  const len = Math.hypot(dir.x, dir.y, dir.z);
+  const nx = dir.x / (len || 1);
+  const ny = dir.y / (len || 1);
+  const nz = dir.z / (len || 1);
+
+  const thetaMax = degToRad(config.lensFov * 0.5);
+  const blendAngleRad = degToRad(config.blendAngle);
+
+  // Front Lens (Facing -Z)
+  const cosTheta1 = Math.max(-1, Math.min(1, -nz));
+  const theta1 = Math.acos(cosTheta1);
+
+  // Rear Lens (Facing +Z)
+  const cosTheta2 = Math.max(-1, Math.min(1, nz));
+  const theta2 = Math.acos(cosTheta2);
+
+  const rx = 0.25 * config.radiusScale;
+  const ry = 0.50 * config.radiusScale;
+
+  // Front lens UV
+  const d1 = Math.hypot(nx, ny);
+  const dir2D1 = d1 > 1e-6 ? [nx / d1, ny / d1] : [0, 1];
+  const rho1 = theta1 / Math.max(1e-4, thetaMax);
+  const u1 = 0.25 + config.centerOffsetX1 + rho1 * rx * dir2D1[0];
+  const v1 = 0.50 + config.centerOffsetY1 + rho1 * ry * dir2D1[1];
+
+  // Rear lens UV
+  const rearDirXY = [-nx, ny];
+  const d2 = Math.hypot(rearDirXY[0], rearDirXY[1]);
+  const dir2D2 = d2 > 1e-6 ? [rearDirXY[0] / d2, rearDirXY[1] / d2] : [0, 1];
+  const rho2 = theta2 / Math.max(1e-4, thetaMax);
+  const u2 = 0.75 + config.centerOffsetX2 + rho2 * rx * dir2D2[0];
+  const v2 = 0.50 + config.centerOffsetY2 + rho2 * ry * dir2D2[1];
+
+  // Smoothstep blend
+  const deltaTheta = theta2 - theta1;
+  const halfBlend = Math.max(0.001, blendAngleRad);
+  const t = Math.max(0, Math.min(1, (deltaTheta - (-halfBlend)) / (2 * halfBlend)));
+  let w = t * t * (3 - 2 * t);
+
+  if (theta1 > thetaMax) w = 0;
+  else if (theta2 > thetaMax) w = 1;
+
+  return {
+    uv1: [u1, v1],
+    uv2: [u2, v2],
+    weightFront: w,
+  };
+}
 
 /**
  * Creates or updates the rotation matrix uniform from Yaw, Pitch, Roll.
@@ -139,7 +279,7 @@ export function createShaderRotationMatrix(orientation: Orientation): THREE.Matr
     'YXZ'
   );
   const m4 = new THREE.Matrix4().makeRotationFromEuler(euler);
-  // We want to transform output directions to source directions, which is inverse:
+  // Transform output directions to source directions (inverse rotation)
   const m4Inv = m4.clone().invert();
 
   const m3 = new THREE.Matrix3();

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import * as THREE from 'three';
-import { Orientation, ColorAdjustments, NadirPatchConfig } from '../types';
+import { Orientation, ColorAdjustments, NadirPatchConfig, StitchingConfig } from '../types';
 import { degToRad } from '../utils/sphericalMath';
 import {
   EquirectangularFragmentShader,
@@ -20,6 +20,7 @@ interface ExportModalProps {
   orientation: Orientation;
   colorAdjustments: ColorAdjustments;
   nadirPatch: NadirPatchConfig;
+  stitching: StitchingConfig;
 }
 
 export const ExportModal: React.FC<ExportModalProps> = ({
@@ -31,6 +32,7 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   orientation,
   colorAdjustments,
   nadirPatch,
+  stitching,
 }) => {
   const { t } = useTranslation();
   const [resolution, setResolution] = useState<'orig' | '8k' | '5.7k' | '4k' | '2k'>('orig');
@@ -85,6 +87,9 @@ export const ExportModal: React.FC<ExportModalProps> = ({
       const texture = await new Promise<THREE.Texture>((resolve, reject) => {
         textureLoader.load(imageSrc, resolve, undefined, reject);
       });
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearFilter;
 
       setExportProgress(50);
       const mat3 = createShaderRotationMatrix(orientation);
@@ -95,6 +100,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({
         uniforms: {
           tSource: { value: texture },
           uRotationMatrix: { value: mat3 },
+          uInputProjection: { value: stitching.projection === 'dual_fisheye' ? 1 : 0 },
+          uLensFovRad: { value: degToRad(stitching.lensFov) },
+          uBlendAngleRad: { value: degToRad(stitching.blendAngle) },
+          uCenterOffset1: { value: new THREE.Vector2(stitching.centerOffsetX1, stitching.centerOffsetY1) },
+          uCenterOffset2: { value: new THREE.Vector2(stitching.centerOffsetX2, stitching.centerOffsetY2) },
+          uRadiusScale: { value: stitching.radiusScale },
           uExposure: { value: colorAdjustments.exposure / 100 },
           uBrightness: { value: colorAdjustments.brightness / 100 },
           uContrast: { value: colorAdjustments.contrast / 100 },

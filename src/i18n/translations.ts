@@ -56,10 +56,31 @@ export const translations = {
     mouseLookHelp: 'Arrastra con el ratón para mirar en 360° • Rueda para zoom',
 
     // Tabs
+    tabStitching: 'Cosido',
     tabOrientation: 'Orientación',
     tabNadir: 'Trípode',
     tabColor: 'Color',
     tabReframe: 'Reencuadre',
+
+    // Stitching Controls
+    stitchingTitle: 'Motor de Cosido Óptico Insta360',
+    stitchingDesc: 'Calibración óptica y fusión de lentes Dual-Fisheye en tiempo real con proyección equidistante.',
+    inputProjection: 'Formato de Proyección de Entrada',
+    projEquirectangular: 'Equirrectangular 360 (Ya cosida)',
+    projDualFisheye: 'Insta360 Dual-Fisheye (2 círculos ópticos)',
+    lensFov: 'Campo de Visión Lentes (FOV)',
+    blendAngle: 'Pluma de Fusión / Solapamiento',
+    radiusScale: 'Escala de Radio de Lente',
+    lensAlignment: 'Alineación de Centro de Lentes',
+    frontLens: 'Lente Frontal',
+    rearLens: 'Lente Trasera',
+    offsetX: 'Desfase X',
+    offsetY: 'Desfase Y',
+    resetStitching: 'Restablecer Calibración Óptica',
+    loadDualFisheyeDemo: 'Cargar Demo Dual-Fisheye Insta360',
+    loadEquirectDemo: 'Cargar Demo Equirrectangular',
+    stitchingActive: 'Cosido Óptico Insta360 Activo',
+    stitchingEquirectActive: 'Costura Continua 360',
 
     // Orientation Controls
     orientationTitle: 'Punto de Vista & Orientación',
@@ -176,10 +197,31 @@ export const translations = {
     mouseLookHelp: 'Drag mouse to look around in 360° • Scroll wheel to zoom',
 
     // Tabs
+    tabStitching: 'Stitching',
     tabOrientation: 'Orientation',
     tabNadir: 'Tripod',
     tabColor: 'Color',
     tabReframe: 'Reframe',
+
+    // Stitching Controls
+    stitchingTitle: 'Insta360 Optical Stitching Engine',
+    stitchingDesc: 'Real-time optical calibration and dual-fisheye lens blending using equidistant projection.',
+    inputProjection: 'Input Projection Format',
+    projEquirectangular: 'Equirectangular 360 (Stitched)',
+    projDualFisheye: 'Insta360 Dual-Fisheye (2 optical circles)',
+    lensFov: 'Lens Field of View (FOV)',
+    blendAngle: 'Overlap Feather / Blend Angle',
+    radiusScale: 'Lens Radius Scale',
+    lensAlignment: 'Lens Center Micro Alignment',
+    frontLens: 'Front Lens',
+    rearLens: 'Rear Lens',
+    offsetX: 'Offset X',
+    offsetY: 'Offset Y',
+    resetStitching: 'Reset Optical Calibration',
+    loadDualFisheyeDemo: 'Load Insta360 Dual-Fisheye Demo',
+    loadEquirectDemo: 'Load Equirectangular Demo',
+    stitchingActive: 'Insta360 Optical Stitching Active',
+    stitchingEquirectActive: 'Continuous 360 Seam',
 
     // Orientation Controls
     orientationTitle: 'Viewpoint & Orientation',
@@ -296,10 +338,31 @@ export const translations = {
     mouseLookHelp: '按住鼠标拖动环视 360° • 滚轮缩放',
 
     // Tabs
+    tabStitching: '光学拼接',
     tabOrientation: '视角朝向',
     tabNadir: '底脚消除',
     tabColor: '色彩调校',
     tabReframe: '平面截取',
+
+    // Stitching Controls
+    stitchingTitle: 'Insta360 光学拼接引擎',
+    stitchingDesc: '基于等距投影的双鱼眼镜头光学实时微调与无缝羽化融合。',
+    inputProjection: '输入图像投影格式',
+    projEquirectangular: '等距柱状全景 (已拼接)',
+    projDualFisheye: 'Insta360 双鱼眼原图 (双光学圆)',
+    lensFov: '镜头视场角 (FOV)',
+    blendAngle: '重叠羽化融合角',
+    radiusScale: '镜头圆半径缩放',
+    lensAlignment: '镜头中心微调与校准',
+    frontLens: '前置镜头',
+    rearLens: '后置镜头',
+    offsetX: 'X轴偏移',
+    offsetY: 'Y轴偏移',
+    resetStitching: '重置光学参数',
+    loadDualFisheyeDemo: '加载 Insta360 双鱼眼示例',
+    loadEquirectDemo: '加载全景测试图',
+    stitchingActive: 'Insta360 光学实时拼接已激活',
+    stitchingEquirectActive: '360° 无缝闭合接缝',
 
     // Orientation Controls
     orientationTitle: '视角与全景朝向',

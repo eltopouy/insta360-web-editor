@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Orientation, ColorAdjustments, NadirPatchConfig, ViewMode } from './types';
-import { generateProceduralDemo360 } from './utils/samplePanoramas';
+import { Orientation, ColorAdjustments, NadirPatchConfig, ViewMode, StitchingConfig } from './types';
+import {
+  generateProceduralDemo360,
+  generateProceduralDualFisheyeDemo,
+  detectInputProjection,
+} from './utils/samplePanoramas';
+import { DEFAULT_STITCHING_CONFIG } from './utils/equirectangularShader';
 import { Viewer360 } from './components/Viewer360';
 import { EquirectangularPreview } from './components/EquirectangularPreview';
 import { Header } from './components/Header';
@@ -19,6 +24,8 @@ export const App: React.FC = () => {
     width: 2048,
     height: 1024,
   });
+
+  const [stitching, setStitching] = useState<StitchingConfig>(DEFAULT_STITCHING_CONFIG);
 
   const [orientation, setOrientation] = useState<Orientation>({
     yaw: 0,
@@ -75,10 +82,12 @@ export const App: React.FC = () => {
     setImageSrc(objectUrl);
     setFileName(file.name);
 
-    // Detect image dimensions
+    // Detect image dimensions and projection format (Dual-Fisheye vs Equirectangular)
     const img = new Image();
     img.onload = () => {
       setImageDimensions({ width: img.width, height: img.height });
+      const detected = detectInputProjection(img);
+      setStitching((prev) => ({ ...prev, projection: detected }));
     };
     img.src = objectUrl;
 
@@ -102,6 +111,38 @@ export const App: React.FC = () => {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleProcessFile(e.dataTransfer.files[0]);
     }
+  };
+
+  // Stitching handlers
+  const handleStitchingChange = (updated: Partial<StitchingConfig>) => {
+    setStitching((prev) => ({ ...prev, ...updated }));
+  };
+
+  const handleResetStitching = () => {
+    setStitching((prev) => ({
+      ...DEFAULT_STITCHING_CONFIG,
+      projection: prev.projection,
+    }));
+  };
+
+  const handleLoadDualFisheyeDemo = () => {
+    cleanupObjectUrl();
+    const demo = generateProceduralDualFisheyeDemo(2048, 1024);
+    setImageSrc(demo);
+    setFileName('insta360_dualfisheye_raw.jpg');
+    setImageDimensions({ width: 2048, height: 1024 });
+    setStitching({ ...DEFAULT_STITCHING_CONFIG, projection: 'dual_fisheye' });
+    setOrientation({ yaw: 0, pitch: 0, roll: 0 });
+  };
+
+  const handleLoadEquirectDemo = () => {
+    cleanupObjectUrl();
+    const demo = generateProceduralDemo360(2048, 1024);
+    setImageSrc(demo);
+    setFileName('demo_insta360_panorama.jpg');
+    setImageDimensions({ width: 2048, height: 1024 });
+    setStitching({ ...DEFAULT_STITCHING_CONFIG, projection: 'equirectangular' });
+    setOrientation({ yaw: 0, pitch: 0, roll: 0 });
   };
 
   // Orientation handlers
@@ -175,12 +216,14 @@ export const App: React.FC = () => {
     orientation,
     colorAdjustments,
     nadirPatch,
+    stitching,
     viewMode,
     fileName,
     language,
     onUpdateOrientation: handleOrientationChange,
     onUpdateColors: handleColorChange,
     onUpdateNadir: handleNadirChange,
+    onUpdateStitching: handleStitchingChange,
     onUpdateViewMode: setViewMode,
     onUpdateLanguage: setLanguage,
     onResetOrientation: handleResetOrientation,
@@ -201,14 +244,7 @@ export const App: React.FC = () => {
         viewMode={viewMode}
         onViewModeChange={setViewMode}
         onFileUpload={handleProcessFile}
-        onLoadDemo={() => {
-          cleanupObjectUrl();
-          const demo = generateProceduralDemo360(2048, 1024);
-          setImageSrc(demo);
-          setFileName('demo_insta360_panorama.jpg');
-          setImageDimensions({ width: 2048, height: 1024 });
-          setOrientation({ yaw: 0, pitch: 0, roll: 0 });
-        }}
+        onLoadDemo={handleLoadEquirectDemo}
         onOpenExport={() => setIsExportModalOpen(true)}
         fileName={fileName}
         isMcpConnected={isMcpConnected}
@@ -233,6 +269,7 @@ export const App: React.FC = () => {
                     orientation={orientation}
                     colorAdjustments={colorAdjustments}
                     nadirPatch={nadirPatch}
+                    stitching={stitching}
                     onSetCurrentViewAsCenter={handleSetCurrentViewAsCenter}
                     viewerRef={viewerRef}
                   />
@@ -252,6 +289,7 @@ export const App: React.FC = () => {
                     orientation={orientation}
                     colorAdjustments={colorAdjustments}
                     nadirPatch={nadirPatch}
+                    stitching={stitching}
                     onYawChange={(yaw) => handleOrientationChange({ yaw })}
                     onPitchChange={(pitch) => handleOrientationChange({ pitch })}
                     onRollChange={(roll) => handleOrientationChange({ roll })}
@@ -269,6 +307,11 @@ export const App: React.FC = () => {
 
         {/* Sidebar Controls */}
         <Sidebar
+          stitching={stitching}
+          onStitchingChange={handleStitchingChange}
+          onResetStitching={handleResetStitching}
+          onLoadDualFisheyeDemo={handleLoadDualFisheyeDemo}
+          onLoadEquirectDemo={handleLoadEquirectDemo}
           orientation={orientation}
           onOrientationChange={handleOrientationChange}
           onResetOrientation={handleResetOrientation}
@@ -303,6 +346,7 @@ export const App: React.FC = () => {
         orientation={orientation}
         colorAdjustments={colorAdjustments}
         nadirPatch={nadirPatch}
+        stitching={stitching}
       />
     </div>
   );

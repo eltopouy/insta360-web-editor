@@ -37,6 +37,16 @@ let editorState = {
     mode: 'blur',
     color: '#15191e',
   },
+  stitching: {
+    projection: 'equirectangular',
+    lensFov: 200,
+    blendAngle: 10,
+    centerOffsetX1: 0,
+    centerOffsetY1: 0,
+    centerOffsetX2: 0,
+    centerOffsetY2: 0,
+    radiusScale: 1.0,
+  },
   viewMode: 'split',
   language: 'es',
   fileName: 'demo_insta360_panorama.jpg',
@@ -458,6 +468,33 @@ const TOOLS = [
       properties: {},
     },
   },
+  {
+    name: 'configure_stitching',
+    description:
+      'Configura el motor de cosido óptico Insta360: permite alternar entre proyección equirectangular y Dual-Fisheye de 2 lentes, ajustar el FOV óptico (180°-220°), el ángulo de pluma/solapamiento (2°-25°) y la escala de radio.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projection: {
+          type: 'string',
+          enum: ['equirectangular', 'dual_fisheye'],
+          description: 'Formato de proyección: "equirectangular" (panorámica cosida) o "dual_fisheye" (fotos raw circulares de Insta360).',
+        },
+        lensFov: {
+          type: 'number',
+          description: 'Campo de visión de cada lente de ojo de pez en grados (180° a 220°, por defecto 200°).',
+        },
+        blendAngle: {
+          type: 'number',
+          description: 'Ángulo de solapamiento y pluma de transición en grados (2° a 25°, por defecto 10°).',
+        },
+        radiusScale: {
+          type: 'number',
+          description: 'Escala del radio del círculo óptico (0.90 a 1.10).',
+        },
+      },
+    },
+  },
 ];
 
 /**
@@ -677,6 +714,34 @@ function handleToolCall(name, args) {
           {
             type: 'text',
             text: `Modal de exportación panorámica 360 abierto en la interfaz web${connectionNotice}.`,
+          },
+        ],
+      };
+    }
+
+    case 'configure_stitching': {
+      const updated = {};
+      if (args.projection && ['equirectangular', 'dual_fisheye'].includes(args.projection)) {
+        updated.projection = args.projection;
+      }
+      if (typeof args.lensFov === 'number') {
+        updated.lensFov = Math.max(180, Math.min(220, args.lensFov));
+      }
+      if (typeof args.blendAngle === 'number') {
+        updated.blendAngle = Math.max(2, Math.min(25, args.blendAngle));
+      }
+      if (typeof args.radiusScale === 'number') {
+        updated.radiusScale = Math.max(0.9, Math.min(1.1, args.radiusScale));
+      }
+
+      editorState.stitching = { ...editorState.stitching, ...updated };
+      broadcastToWeb({ type: 'SET_STITCHING', data: updated });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Parámetros de cosido óptico actualizados${connectionNotice}: ${JSON.stringify(editorState.stitching)}.`,
           },
         ],
       };

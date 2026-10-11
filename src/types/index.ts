@@ -25,6 +25,19 @@ export interface ReframeConfig {
   fov: number; // 30 to 160 degrees
 }
 
+export type InputProjection = 'equirectangular' | 'dual_fisheye';
+
+export interface StitchingConfig {
+  projection: InputProjection;
+  lensFov: number;        // Lens Field of View in degrees (e.g. 200 for Insta360)
+  blendAngle: number;     // Overlap feather blend angle in degrees (e.g. 10)
+  centerOffsetX1: number; // Front lens center micro offset X (-0.05 to 0.05)
+  centerOffsetY1: number; // Front lens center micro offset Y (-0.05 to 0.05)
+  centerOffsetX2: number; // Rear lens center micro offset X (-0.05 to 0.05)
+  centerOffsetY2: number; // Rear lens center micro offset Y (-0.05 to 0.05)
+  radiusScale: number;    // Radius scale multiplier (0.90 to 1.10)
+}
+
 export type ViewMode = '3d' | 'equirectangular' | 'split';
 
 export interface ImageMetadata {
@@ -34,3 +47,4 @@ export interface ImageMetadata {
   sizeBytes: number;
   format: string;
 }
+

@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { Orientation, ColorAdjustments, NadirPatchConfig } from '../types';
+import { Orientation, ColorAdjustments, NadirPatchConfig, StitchingConfig } from '../types';
 import { degToRad } from '../utils/sphericalMath';
 import {
   EquirectangularFragmentShader,
@@ -14,6 +14,7 @@ interface EquirectangularPreviewProps {
   orientation: Orientation;
   colorAdjustments: ColorAdjustments;
   nadirPatch: NadirPatchConfig;
+  stitching: StitchingConfig;
   onYawChange: (newYaw: number) => void;
   onPitchChange: (newPitch: number) => void;
   onRollChange: (newRoll: number) => void;
@@ -24,6 +25,7 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
   orientation,
   colorAdjustments,
   nadirPatch,
+  stitching,
   onYawChange,
   onPitchChange,
 }) => {
@@ -64,7 +66,15 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
     // Fullscreen quad
     const geometry = new THREE.PlaneGeometry(2, 2);
     const textureLoader = new THREE.TextureLoader();
-    const texture = textureLoader.load(imageSrc);
+    const texture = textureLoader.load(imageSrc, (tex) => {
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      tex.minFilter = THREE.LinearFilter;
+      renderer.render(scene, camera);
+    });
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.minFilter = THREE.LinearFilter;
 
     const mat3 = createShaderRotationMatrix(orientation);
 
@@ -74,6 +84,12 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
       uniforms: {
         tSource: { value: texture },
         uRotationMatrix: { value: mat3 },
+        uInputProjection: { value: stitching.projection === 'dual_fisheye' ? 1 : 0 },
+        uLensFovRad: { value: degToRad(stitching.lensFov) },
+        uBlendAngleRad: { value: degToRad(stitching.blendAngle) },
+        uCenterOffset1: { value: new THREE.Vector2(stitching.centerOffsetX1, stitching.centerOffsetY1) },
+        uCenterOffset2: { value: new THREE.Vector2(stitching.centerOffsetX2, stitching.centerOffsetY2) },
+        uRadiusScale: { value: stitching.radiusScale },
         uExposure: { value: colorAdjustments.exposure / 100 },
         uBrightness: { value: colorAdjustments.brightness / 100 },
         uContrast: { value: colorAdjustments.contrast / 100 },
@@ -119,6 +135,9 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
     if (!shaderMaterialRef.current) return;
     const loader = new THREE.TextureLoader();
     loader.load(imageSrc, (texture) => {
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearFilter;
       if (shaderMaterialRef.current) {
         shaderMaterialRef.current.uniforms.tSource.value = texture;
         rendererRef.current?.render(sceneRef.current!, cameraRef.current!);
@@ -132,6 +151,20 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
 
     const mat3 = createShaderRotationMatrix(orientation);
     shaderMaterialRef.current.uniforms.uRotationMatrix.value = mat3;
+    shaderMaterialRef.current.uniforms.uInputProjection.value =
+      stitching.projection === 'dual_fisheye' ? 1 : 0;
+    shaderMaterialRef.current.uniforms.uLensFovRad.value = degToRad(stitching.lensFov);
+    shaderMaterialRef.current.uniforms.uBlendAngleRad.value = degToRad(stitching.blendAngle);
+    shaderMaterialRef.current.uniforms.uCenterOffset1.value.set(
+      stitching.centerOffsetX1,
+      stitching.centerOffsetY1
+    );
+    shaderMaterialRef.current.uniforms.uCenterOffset2.value.set(
+      stitching.centerOffsetX2,
+      stitching.centerOffsetY2
+    );
+    shaderMaterialRef.current.uniforms.uRadiusScale.value = stitching.radiusScale;
+
     shaderMaterialRef.current.uniforms.uExposure.value = colorAdjustments.exposure / 100;
     shaderMaterialRef.current.uniforms.uBrightness.value = colorAdjustments.brightness / 100;
     shaderMaterialRef.current.uniforms.uContrast.value = colorAdjustments.contrast / 100;
@@ -146,7 +179,7 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
     shaderMaterialRef.current.uniforms.uNadirColor.value = new THREE.Color(nadirPatch.color);
 
     rendererRef.current.render(sceneRef.current, cameraRef.current);
-  }, [orientation, colorAdjustments, nadirPatch]);
+  }, [orientation, colorAdjustments, nadirPatch, stitching]);
 
   // Direct mouse drag on 2:1 canvas to pan Yaw and Pitch
   const handlePointerDown = (e: React.PointerEvent) => {

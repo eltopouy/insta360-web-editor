@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
-import { Orientation, ColorAdjustments, NadirPatchConfig } from '../types';
+import { Orientation, ColorAdjustments, NadirPatchConfig, StitchingConfig } from '../types';
 import { degToRad } from '../utils/sphericalMath';
 import { useTranslation } from '../i18n/I18nContext';
 import { Compass, Crosshair, Eye, RotateCcw } from 'lucide-react';
@@ -10,6 +10,7 @@ interface Viewer360Props {
   orientation: Orientation;
   colorAdjustments: ColorAdjustments;
   nadirPatch: NadirPatchConfig;
+  stitching: StitchingConfig;
   onSetCurrentViewAsCenter: (yaw: number, pitch: number) => void;
   viewerRef?: React.MutableRefObject<{ captureSnapshot: (aspect: string, fov: number) => string } | null>;
 }
@@ -27,6 +28,14 @@ const SphereFragmentShader = /* glsl */ `
   varying vec2 vUv;
   uniform sampler2D tSource;
 
+  // Stitching Uniforms
+  uniform int uInputProjection; // 0 = Equirectangular, 1 = Dual-Fisheye
+  uniform float uLensFovRad;
+  uniform float uBlendAngleRad;
+  uniform vec2 uCenterOffset1;
+  uniform vec2 uCenterOffset2;
+  uniform float uRadiusScale;
+
   uniform float uExposure;
   uniform float uBrightness;
   uniform float uContrast;
@@ -38,6 +47,9 @@ const SphereFragmentShader = /* glsl */ `
   uniform float uNadirFeather;
   uniform int uNadirMode;
   uniform vec3 uNadirColor;
+
+  const float PI = 3.14159265358979323846;
+  const float TWO_PI = 6.28318530717958647692;
 
   vec3 rgb2hsv(vec3 c) {
     vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -58,7 +70,60 @@ const SphereFragmentShader = /* glsl */ `
   void main() {
     // Flip X so panorama is not mirrored when viewed from inside
     vec2 uv = vec2(1.0 - vUv.x, vUv.y);
-    vec4 color = texture2D(tSource, uv);
+    vec4 color;
+
+    if (uInputProjection == 1) {
+      // INSTA360 DUAL-FISHEYE OPTICAL STITCHING
+      float lon = (uv.x - 0.5) * TWO_PI;
+      float lat = (uv.y - 0.5) * PI;
+
+      float cosLat = cos(lat);
+      vec3 dir = vec3(
+        cosLat * sin(lon),
+        sin(lat),
+        -cosLat * cos(lon)
+      );
+
+      float thetaMax = uLensFovRad * 0.5;
+      float theta1 = acos(clamp(-dir.z, -1.0, 1.0));
+      float theta2 = acos(clamp(dir.z, -1.0, 1.0));
+
+      float rx = 0.25 * uRadiusScale;
+      float ry = 0.50 * uRadiusScale;
+
+      float d1 = length(dir.xy);
+      vec2 dir2D1 = (d1 > 1e-6) ? (dir.xy / d1) : vec2(0.0, 1.0);
+      float rho1 = theta1 / max(1e-4, thetaMax);
+      vec2 c1 = vec2(0.25 + uCenterOffset1.x, 0.5 + uCenterOffset1.y);
+      vec2 uv1 = c1 + rho1 * vec2(rx * dir2D1.x, ry * dir2D1.y);
+
+      vec2 rearDirXY = vec2(-dir.x, dir.y);
+      float d2 = length(rearDirXY);
+      vec2 dir2D2 = (d2 > 1e-6) ? (rearDirXY / d2) : vec2(0.0, 1.0);
+      float rho2 = theta2 / max(1e-4, thetaMax);
+      vec2 c2 = vec2(0.75 + uCenterOffset2.x, 0.5 + uCenterOffset2.y);
+      vec2 uv2 = c2 + rho2 * vec2(rx * dir2D2.x, ry * dir2D2.y);
+
+      float deltaTheta = theta2 - theta1;
+      float halfBlend = max(0.001, uBlendAngleRad);
+      float w = smoothstep(-halfBlend, halfBlend, deltaTheta);
+
+      if (theta1 > thetaMax) w = 0.0;
+      else if (theta2 > thetaMax) w = 1.0;
+
+      if (w <= 0.001) {
+        color = texture2D(tSource, uv2);
+      } else if (w >= 0.999) {
+        color = texture2D(tSource, uv1);
+      } else {
+        vec4 col1 = texture2D(tSource, uv1);
+        vec4 col2 = texture2D(tSource, uv2);
+        color = mix(col2, col1, w);
+      }
+    } else {
+      // Seamless equirectangular
+      color = texture2D(tSource, uv);
+    }
 
     // Nadir Patch (South Pole: vUv.y near 0.0)
     if (uNadirEnabled) {
@@ -97,6 +162,7 @@ export const Viewer360: React.FC<Viewer360Props> = ({
   orientation,
   colorAdjustments,
   nadirPatch,
+  stitching,
   onSetCurrentViewAsCenter,
   viewerRef,
 }) => {
@@ -199,15 +265,27 @@ export const Viewer360: React.FC<Viewer360Props> = ({
     const geometry = new THREE.SphereGeometry(500, 64, 32);
 
     const textureLoader = new THREE.TextureLoader();
-    const texture = textureLoader.load(imageSrc, () => {
+    const texture = textureLoader.load(imageSrc, (tex) => {
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.ClampToEdgeWrapping;
+      tex.minFilter = THREE.LinearFilter;
       renderer.render(scene, camera);
     });
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+    texture.minFilter = THREE.LinearFilter;
 
     const shaderMaterial = new THREE.ShaderMaterial({
       vertexShader: SphereVertexShader,
       fragmentShader: SphereFragmentShader,
       uniforms: {
         tSource: { value: texture },
+        uInputProjection: { value: stitching.projection === 'dual_fisheye' ? 1 : 0 },
+        uLensFovRad: { value: degToRad(stitching.lensFov) },
+        uBlendAngleRad: { value: degToRad(stitching.blendAngle) },
+        uCenterOffset1: { value: new THREE.Vector2(stitching.centerOffsetX1, stitching.centerOffsetY1) },
+        uCenterOffset2: { value: new THREE.Vector2(stitching.centerOffsetX2, stitching.centerOffsetY2) },
+        uRadiusScale: { value: stitching.radiusScale },
         uExposure: { value: colorAdjustments.exposure / 100 },
         uBrightness: { value: colorAdjustments.brightness / 100 },
         uContrast: { value: colorAdjustments.contrast / 100 },
@@ -276,6 +354,9 @@ export const Viewer360: React.FC<Viewer360Props> = ({
     if (!shaderMaterialRef.current) return;
     const loader = new THREE.TextureLoader();
     loader.load(imageSrc, (texture) => {
+      texture.wrapS = THREE.RepeatWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+      texture.minFilter = THREE.LinearFilter;
       if (shaderMaterialRef.current) {
         shaderMaterialRef.current.uniforms.tSource.value = texture;
       }
@@ -294,9 +375,23 @@ export const Viewer360: React.FC<Viewer360Props> = ({
     }
   }, [orientation]);
 
-  // Update uniforms when colors or nadir patch changes
+  // Update uniforms when colors, nadir patch, or stitching changes
   useEffect(() => {
     if (!shaderMaterialRef.current) return;
+    shaderMaterialRef.current.uniforms.uInputProjection.value =
+      stitching.projection === 'dual_fisheye' ? 1 : 0;
+    shaderMaterialRef.current.uniforms.uLensFovRad.value = degToRad(stitching.lensFov);
+    shaderMaterialRef.current.uniforms.uBlendAngleRad.value = degToRad(stitching.blendAngle);
+    shaderMaterialRef.current.uniforms.uCenterOffset1.value.set(
+      stitching.centerOffsetX1,
+      stitching.centerOffsetY1
+    );
+    shaderMaterialRef.current.uniforms.uCenterOffset2.value.set(
+      stitching.centerOffsetX2,
+      stitching.centerOffsetY2
+    );
+    shaderMaterialRef.current.uniforms.uRadiusScale.value = stitching.radiusScale;
+
     shaderMaterialRef.current.uniforms.uExposure.value = colorAdjustments.exposure / 100;
     shaderMaterialRef.current.uniforms.uBrightness.value = colorAdjustments.brightness / 100;
     shaderMaterialRef.current.uniforms.uContrast.value = colorAdjustments.contrast / 100;
@@ -309,7 +404,7 @@ export const Viewer360: React.FC<Viewer360Props> = ({
     shaderMaterialRef.current.uniforms.uNadirMode.value =
       nadirPatch.mode === 'color' ? 0 : nadirPatch.mode === 'blur' ? 1 : 2;
     shaderMaterialRef.current.uniforms.uNadirColor.value = new THREE.Color(nadirPatch.color);
-  }, [colorAdjustments, nadirPatch]);
+  }, [colorAdjustments, nadirPatch, stitching]);
 
   // Mouse / Touch Drag Handlers
   const handlePointerDown = (e: React.PointerEvent) => {
