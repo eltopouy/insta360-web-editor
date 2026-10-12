@@ -7,6 +7,7 @@ import {
   getRotationMatrix,
   vectorToYawPitch,
   formatDegrees,
+  combineOrientations,
 } from './sphericalMath.ts';
 
 describe('Spherical Math Tests', () => {
@@ -40,7 +41,8 @@ describe('Spherical Math Tests', () => {
     const forward = new THREE.Vector3(0, 0, -1);
     forward.applyMatrix4(mat);
 
-    // After 90 deg Yaw, forward (-Z) should rotate towards East (-X or +X depending on convention)
+    // After 90 deg Yaw, forward (-Z) should rotate towards East (+X)
+    assert.ok(Math.abs(forward.x - 1.0) < 1e-4, 'Forward rotates to +X (East)');
     assert.ok(Math.abs(forward.y) < 1e-5, 'Y should remain 0');
     assert.ok(Math.abs(forward.length() - 1) < 1e-5, 'Length should remain 1');
   });
@@ -61,5 +63,16 @@ describe('Spherical Math Tests', () => {
     const nadir = new THREE.Vector3(0, -1, 0);
     const angles3 = vectorToYawPitch(nadir);
     assert.strictEqual(Math.round(angles3.pitch), -90, 'Nadir Pitch should be -90°');
+  });
+
+  test('combineOrientations accurately composes 3D camera pose into orientation', () => {
+    // Starting from 0, looking 45° right and 20° up
+    const combined1 = combineOrientations({ yaw: 0, pitch: 0, roll: 0 }, 45, 20);
+    assert.strictEqual(combined1.yaw, 45, 'Yaw must be +45°');
+    assert.strictEqual(combined1.pitch, 20, 'Pitch must be +20°');
+
+    // Combining with existing yaw +20°
+    const combined2 = combineOrientations({ yaw: 20, pitch: 0, roll: 0 }, 30, 0);
+    assert.strictEqual(combined2.yaw, 50, 'Yaw must be 20 + 30 = 50°');
   });
 });

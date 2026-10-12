@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Orientation, ColorAdjustments, NadirPatchConfig, StitchingConfig } from '../types';
-import { degToRad } from '../utils/sphericalMath';
+import { degToRad, getRotationMatrix } from '../utils/sphericalMath';
 import { useTranslation } from '../i18n/I18nContext';
 import { Compass, Crosshair, Eye, RotateCcw } from 'lucide-react';
 
@@ -12,7 +12,11 @@ interface Viewer360Props {
   nadirPatch: NadirPatchConfig;
   stitching: StitchingConfig;
   onSetCurrentViewAsCenter: (yaw: number, pitch: number) => void;
-  viewerRef?: React.MutableRefObject<{ captureSnapshot: (aspect: string, fov: number) => string } | null>;
+  onCameraPoseChange?: (pose: { lon: number; lat: number; fov: number }) => void;
+  viewerRef?: React.MutableRefObject<{
+    captureSnapshot: (aspect: string, fov: number) => string;
+    getCurrentView?: () => { lon: number; lat: number; fov: number };
+  } | null>;
 }
 
 const SphereVertexShader = /* glsl */ `
@@ -229,6 +233,7 @@ export const Viewer360: React.FC<Viewer360Props> = ({
   nadirPatch,
   stitching,
   onSetCurrentViewAsCenter,
+  onCameraPoseChange,
   viewerRef,
 }) => {
   const { t } = useTranslation();
@@ -250,7 +255,7 @@ export const Viewer360: React.FC<Viewer360Props> = ({
   const onPointerDownLon = useRef(0);
   const onPointerDownLat = useRef(0);
 
-  // Expose capture snapshot to parent
+  // Expose capture snapshot and current view to parent
   useEffect(() => {
     if (viewerRef) {
       viewerRef.current = {
@@ -301,9 +306,15 @@ export const Viewer360: React.FC<Viewer360Props> = ({
           ctx.putImageData(imgData, 0, 0);
           return canvas.toDataURL('image/jpeg', 0.95);
         },
+        getCurrentView: () => ({ lon: cameraLon, lat: cameraLat, fov: cameraFov }),
       };
     }
-  }, [viewerRef]);
+  }, [viewerRef, cameraLon, cameraLat, cameraFov]);
+
+  // Notify parent of active camera viewpoint
+  useEffect(() => {
+    onCameraPoseChange?.({ lon: cameraLon, lat: cameraLat, fov: cameraFov });
+  }, [cameraLon, cameraLat, cameraFov, onCameraPoseChange]);
 
   // Setup Three.js scene
   useEffect(() => {
@@ -327,7 +338,9 @@ export const Viewer360: React.FC<Viewer360Props> = ({
     containerRef.current.appendChild(renderer.domElement);
 
     // Sphere geometry (Radius 500)
+    // Rotate geometry +90 deg around Y so texture center (uv=0.5, 0.5) is along optical forward (-Z)
     const geometry = new THREE.SphereGeometry(500, 64, 32);
+    geometry.rotateY(Math.PI / 2);
 
     const textureLoader = new THREE.TextureLoader();
     const texture = textureLoader.load(imageSrc, (tex) => {
@@ -375,12 +388,8 @@ export const Viewer360: React.FC<Viewer360Props> = ({
 
     const mesh = new THREE.Mesh(geometry, shaderMaterial);
     // Apply initial orientation
-    mesh.rotation.set(
-      degToRad(orientation.pitch),
-      degToRad(-orientation.yaw),
-      degToRad(orientation.roll),
-      'YXZ'
-    );
+    const mSphere = getRotationMatrix(orientation).invert();
+    mesh.setRotationFromMatrix(mSphere);
     scene.add(mesh);
     sphereMeshRef.current = mesh;
 
@@ -390,12 +399,13 @@ export const Viewer360: React.FC<Viewer360Props> = ({
       animationId = requestAnimationFrame(animate);
 
       const currentLat = Math.max(-85, Math.min(85, cameraLat));
-      const phi = degToRad(90 - currentLat);
-      const theta = degToRad(cameraLon);
+      const latRad = degToRad(currentLat);
+      const lonRad = degToRad(cameraLon);
 
-      const targetX = 500 * Math.sin(phi) * Math.cos(theta);
-      const targetY = 500 * Math.cos(phi);
-      const targetZ = 500 * Math.sin(phi) * Math.sin(theta);
+      const cosLat = Math.cos(latRad);
+      const targetX = 500 * cosLat * Math.sin(lonRad);
+      const targetY = 500 * Math.sin(latRad);
+      const targetZ = -500 * cosLat * Math.cos(lonRad);
 
       camera.lookAt(targetX, targetY, targetZ);
       renderer.render(scene, camera);
@@ -438,12 +448,8 @@ export const Viewer360: React.FC<Viewer360Props> = ({
   // Update mesh rotation directly when orientation changes
   useEffect(() => {
     if (sphereMeshRef.current) {
-      sphereMeshRef.current.rotation.set(
-        degToRad(orientation.pitch),
-        degToRad(-orientation.yaw),
-        degToRad(orientation.roll),
-        'YXZ'
-      );
+      const mSphere = getRotationMatrix(orientation).invert();
+      sphereMeshRef.current.setRotationFromMatrix(mSphere);
     }
   }, [orientation]);
 
@@ -500,7 +506,10 @@ export const Viewer360: React.FC<Viewer360Props> = ({
     const deltaY = e.clientY - onPointerDownPointerY.current;
 
     const speed = (cameraFov / 75) * 0.15;
-    setCameraLon((onPointerDownLon.current - deltaX * speed + 360) % 360);
+    let newLon = onPointerDownLon.current - deltaX * speed;
+    while (newLon > 180) newLon -= 360;
+    while (newLon < -180) newLon += 360;
+    setCameraLon(newLon);
     setCameraLat(Math.max(-85, Math.min(85, onPointerDownLat.current + deltaY * speed)));
   };
 
@@ -520,10 +529,7 @@ export const Viewer360: React.FC<Viewer360Props> = ({
 
   // Button: "Fijar esta vista como centro"
   const handleSetCurrentViewAsCenter = () => {
-    let targetYaw = (cameraLon > 180 ? cameraLon - 360 : cameraLon);
-    let targetPitch = cameraLat;
-
-    onSetCurrentViewAsCenter(-targetYaw, -targetPitch);
+    onSetCurrentViewAsCenter(cameraLon, cameraLat);
     setCameraLon(0);
     setCameraLat(0);
   };

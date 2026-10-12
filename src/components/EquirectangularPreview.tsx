@@ -212,13 +212,13 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
 
-    // Moving across width is 360 degrees
-    let newYaw = startYaw.current + (deltaX / width) * 360;
+    // Natural direct-manipulation dragging: cursor pulls image content directly
+    let newYaw = startYaw.current - (deltaX / width) * 360;
     // Normalize to [-180, 180]
     while (newYaw > 180) newYaw -= 360;
     while (newYaw < -180) newYaw += 360;
 
-    let newPitch = startPitch.current - (deltaY / height) * 180;
+    let newPitch = startPitch.current + (deltaY / height) * 180;
     newPitch = Math.max(-90, Math.min(90, newPitch));
 
     onYawChange(Math.round(newYaw * 10) / 10);

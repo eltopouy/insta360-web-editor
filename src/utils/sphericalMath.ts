@@ -12,21 +12,54 @@ export const degToRad = (deg: number) => (deg * Math.PI) / 180;
 export const radToDeg = (rad: number) => (rad * 180) / Math.PI;
 
 /**
- * Builds a 3x3 rotation matrix for Yaw, Pitch, Roll (ZYX / YXZ order).
- * Yaw: rotation around Y-axis (heading)
- * Pitch: rotation around X-axis (elevation)
- * Roll: rotation around Z-axis (bank / horizon tilt)
+ * Builds a 3D rotation matrix for Yaw, Pitch, Roll (Euler 'YXZ' order).
+ * Yaw: heading (turn right > 0)
+ * Pitch: elevation (tilt up > 0)
+ * Roll: bank (horizon tilt clockwise > 0)
  */
 export function getRotationMatrix(orientation: Orientation): THREE.Matrix4 {
+  if (orientation.yaw === 0 && orientation.pitch === 0 && orientation.roll === 0) {
+    return new THREE.Matrix4();
+  }
   const euler = new THREE.Euler(
     degToRad(orientation.pitch),
-    degToRad(orientation.yaw),
-    degToRad(orientation.roll),
+    degToRad(-orientation.yaw),
+    degToRad(-orientation.roll),
     'YXZ'
   );
   const matrix = new THREE.Matrix4();
   matrix.makeRotationFromEuler(euler);
   return matrix;
+}
+
+/**
+ * Combines an existing orientation with an interactive 3D camera pose (lon, lat).
+ * Uses exact 3D matrix multiplication to prevent gimbal lock and preserve the hit point.
+ */
+export function combineOrientations(prev: Orientation, cameraLon: number, cameraLat: number): Orientation {
+  const mCam = new THREE.Matrix4().makeRotationFromEuler(
+    new THREE.Euler(degToRad(cameraLat), degToRad(-cameraLon), 0, 'YXZ')
+  );
+  const mCurrent = getRotationMatrix(prev);
+  const mTotal = mCam.multiply(mCurrent);
+  const newEuler = new THREE.Euler().setFromRotationMatrix(mTotal, 'YXZ');
+
+  let newYaw = -newEuler.y * (180 / Math.PI);
+  while (newYaw > 180) newYaw -= 360;
+  while (newYaw < -180) newYaw += 360;
+
+  let newPitch = newEuler.x * (180 / Math.PI);
+  newPitch = Math.max(-90, Math.min(90, newPitch));
+
+  let newRoll = -newEuler.z * (180 / Math.PI);
+  while (newRoll > 180) newRoll -= 360;
+  while (newRoll < -180) newRoll += 360;
+
+  return {
+    yaw: Math.round(newYaw * 10) / 10,
+    pitch: Math.round(newPitch * 10) / 10,
+    roll: Math.round(newRoll * 10) / 10,
+  };
 }
 
 /**

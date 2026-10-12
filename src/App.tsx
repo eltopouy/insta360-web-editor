@@ -13,6 +13,7 @@ import { Sidebar } from './components/Sidebar';
 import { ExportModal } from './components/ExportModal';
 import { useMcpBridge } from './hooks/useMcpBridge';
 import { useTranslation } from './i18n/I18nContext';
+import { combineOrientations } from './utils/sphericalMath';
 import { UploadCloud } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -52,8 +53,16 @@ export const App: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('split');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [activeCameraPose, setActiveCameraPose] = useState<{ lon: number; lat: number; fov: number }>({
+    lon: 0,
+    lat: 0,
+    fov: 75,
+  });
 
-  const viewerRef = useRef<{ captureSnapshot: (aspect: string, fov: number) => string } | null>(null);
+  const viewerRef = useRef<{
+    captureSnapshot: (aspect: string, fov: number) => string;
+    getCurrentView?: () => { lon: number; lat: number; fov: number };
+  } | null>(null);
 
   const currentObjectUrlRef = useRef<string | null>(null);
 
@@ -163,21 +172,9 @@ export const App: React.FC = () => {
   };
 
   // Set current camera view as the new center of the 360 photo
-  const handleSetCurrentViewAsCenter = (deltaYaw: number, deltaPitch: number) => {
-    setOrientation((prev) => {
-      let newYaw = prev.yaw + deltaYaw;
-      while (newYaw > 180) newYaw -= 360;
-      while (newYaw < -180) newYaw += 360;
-
-      let newPitch = prev.pitch + deltaPitch;
-      newPitch = Math.max(-90, Math.min(90, newPitch));
-
-      return {
-        ...prev,
-        yaw: Math.round(newYaw * 10) / 10,
-        pitch: Math.round(newPitch * 10) / 10,
-      };
-    });
+  const handleSetCurrentViewAsCenter = (cameraLon: number, cameraLat: number) => {
+    setOrientation((prev) => combineOrientations(prev, cameraLon, cameraLat));
+    setActiveCameraPose((prev) => ({ ...prev, lon: 0, lat: 0 }));
   };
 
   // Color handlers
@@ -275,6 +272,7 @@ export const App: React.FC = () => {
                     nadirPatch={nadirPatch}
                     stitching={stitching}
                     onSetCurrentViewAsCenter={handleSetCurrentViewAsCenter}
+                    onCameraPoseChange={setActiveCameraPose}
                     viewerRef={viewerRef}
                   />
                 </div>
@@ -348,9 +346,12 @@ export const App: React.FC = () => {
         sourceWidth={imageDimensions.width}
         sourceHeight={imageDimensions.height}
         orientation={orientation}
+        activeCameraPose={activeCameraPose}
         colorAdjustments={colorAdjustments}
         nadirPatch={nadirPatch}
         stitching={stitching}
+        onBakeActiveViewToOrientation={(baked) => setOrientation(baked)}
+        viewerRef={viewerRef}
       />
     </div>
   );

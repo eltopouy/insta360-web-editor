@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { Orientation, StitchingConfig } from '../types/index.ts';
-import { degToRad } from './sphericalMath.ts';
+import { degToRad, getRotationMatrix } from './sphericalMath.ts';
 
 export const DEFAULT_STITCHING_CONFIG: StitchingConfig = {
   projection: 'equirectangular',
@@ -356,20 +356,15 @@ export function sampleDualFisheyeCoordinates(
 }
 
 /**
- * Creates or updates the rotation matrix uniform from Yaw, Pitch, Roll.
+ * Creates or updates the 3x3 rotation matrix uniform from Yaw, Pitch, Roll.
+ * Maps output screen directions to source spherical directions so the chosen viewpoint is centered.
  */
 export function createShaderRotationMatrix(orientation: Orientation): THREE.Matrix3 {
-  const euler = new THREE.Euler(
-    degToRad(orientation.pitch),
-    degToRad(orientation.yaw),
-    degToRad(orientation.roll),
-    'YXZ'
-  );
-  const m4 = new THREE.Matrix4().makeRotationFromEuler(euler);
-  // Transform output directions to source directions (inverse rotation)
-  const m4Inv = m4.clone().invert();
-
+  if (orientation.yaw === 0 && orientation.pitch === 0 && orientation.roll === 0) {
+    return new THREE.Matrix3();
+  }
+  const m4 = getRotationMatrix(orientation);
   const m3 = new THREE.Matrix3();
-  m3.setFromMatrix4(m4Inv);
+  m3.setFromMatrix4(m4);
   return m3;
 }
