@@ -36,6 +36,15 @@ export interface StitchingConfig {
   centerOffsetX2: number; // Rear lens center micro offset X (-0.05 to 0.05)
   centerOffsetY2: number; // Rear lens center micro offset Y (-0.05 to 0.05)
   radiusScale: number;    // Radius scale multiplier (0.90 to 1.10)
+
+  // Advanced Optical & Physical Parameters (Insta360 Studio Engine)
+  distortionK1: number;        // Radial polynomial distortion k1 (-0.15 to 0.15)
+  distortionK2: number;        // Radial polynomial distortion k2 (-0.10 to 0.10)
+  chromaticAbRed: number;      // Lateral chromatic aberration Red factor (-0.05 to 0.05)
+  chromaticAbBlue: number;     // Lateral chromatic aberration Blue factor (-0.05 to 0.05)
+  lensBaselineMm: number;      // Physical separation between lenses in mm (0 to 50mm, e.g. 28mm for ONE R)
+  convergenceDistance: number; // Subject convergence distance in meters (0.5m to 20m)
+  exposureBalance: number;     // Front/Rear overlap photometric exposure balance (-1.0 to 1.0)
 }
 
 export type ViewMode = '3d' | 'equirectangular' | 'split';

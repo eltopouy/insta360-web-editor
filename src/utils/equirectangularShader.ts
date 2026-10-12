@@ -11,6 +11,15 @@ export const DEFAULT_STITCHING_CONFIG: StitchingConfig = {
   centerOffsetX2: 0,   // Rear lens micro X offset
   centerOffsetY2: 0,   // Rear lens micro Y offset
   radiusScale: 1.0,    // Circle radius scale
+
+  // Advanced Optical & Physical Parameters (Insta360 Studio Engine)
+  distortionK1: 0.0,
+  distortionK2: 0.0,
+  chromaticAbRed: 0.0,
+  chromaticAbBlue: 0.0,
+  lensBaselineMm: 28.0,      // 28mm inter-lens baseline for Insta360 ONE R
+  convergenceDistance: 2.5,  // 2.5 meters default subject convergence distance
+  exposureBalance: 0.0,
 };
 
 export const EquirectangularVertexShader = /* glsl */ `
@@ -35,6 +44,15 @@ export const EquirectangularFragmentShader = /* glsl */ `
   uniform vec2 uCenterOffset1;  // Front lens center offset (u, v)
   uniform vec2 uCenterOffset2;  // Rear lens center offset (u, v)
   uniform float uRadiusScale;   // Lens circle radius scale
+
+  // Advanced Optical & Physical Calibration Uniforms
+  uniform float uDistortionK1;        // Polynomial radial distortion k1
+  uniform float uDistortionK2;        // Polynomial radial distortion k2
+  uniform float uChromaticAbRed;      // Lateral chromatic aberration Red factor
+  uniform float uChromaticAbBlue;     // Lateral chromatic aberration Blue factor
+  uniform float uLensBaselineMm;      // Inter-lens baseline in mm (e.g. 28mm)
+  uniform float uConvergenceDistance; // Convergence distance in meters
+  uniform float uExposureBalance;     // Overlap photometric exposure balance (-1 to 1)
 
   // Color adjustments
   uniform float uExposure;   // -1.0 to 1.0
@@ -92,47 +110,72 @@ export const EquirectangularFragmentShader = /* glsl */ `
     // 4. Sample Texture according to projection type
     if (uInputProjection == 1) {
       // -------------------------------------------------------------
-      // INSTA360 DUAL-FISHEYE OPTICAL STITCHING ENGINE
+      // INSTA360 DUAL-FISHEYE OPTICAL STITCHING ENGINE (ADVANCED)
       // -------------------------------------------------------------
       float thetaMax = uLensFovRad * 0.5;
 
+      // Inter-lens physical baseline parallax correction:
+      // Front lens nodal point is offset along -Z, rear lens along +Z.
+      float baselineM = uLensBaselineMm * 0.001;
+      float distM = max(0.2, uConvergenceDistance);
+      vec3 dirFront = normalize(distM * srcDir - vec3(0.0, 0.0, -baselineM * 0.5));
+      vec3 dirRear  = normalize(distM * srcDir - vec3(0.0, 0.0,  baselineM * 0.5));
+
       // Front Lens (Facing -Z)
-      // theta1 is angle between ray and front optical axis (0, 0, -1)
-      float cosTheta1 = clamp(-srcDir.z, -1.0, 1.0);
+      float cosTheta1 = clamp(-dirFront.z, -1.0, 1.0);
       float theta1 = acos(cosTheta1);
 
       // Rear Lens (Facing +Z)
-      // theta2 is angle between ray and rear optical axis (0, 0, 1)
-      float cosTheta2 = clamp(srcDir.z, -1.0, 1.0);
+      float cosTheta2 = clamp(dirRear.z, -1.0, 1.0);
       float theta2 = acos(cosTheta2);
 
       // Radii in UV coordinates for a 2:1 side-by-side dual-fisheye frame
-      // Width = 2 * Height. Height spans [0..1] in UV Y.
-      // So circle radius is 0.5 in Y, and 0.25 in X.
       float rx = 0.25 * uRadiusScale;
       float ry = 0.50 * uRadiusScale;
 
-      // Front lens UV mapping (centered at 0.25, 0.5)
-      float d1 = length(srcDir.xy);
-      vec2 dir2D1 = (d1 > 1e-6) ? (srcDir.xy / d1) : vec2(0.0, 1.0);
+      // Front lens UV mapping with Kannala-Brandt polynomial & LCA
+      float d1 = length(dirFront.xy);
+      vec2 dir2D1 = (d1 > 1e-6) ? (dirFront.xy / d1) : vec2(0.0, 1.0);
       float rho1 = theta1 / max(1e-4, thetaMax);
-      vec2 c1 = vec2(0.25 + uCenterOffset1.x, 0.5 + uCenterOffset1.y);
-      vec2 uv1 = c1 + rho1 * vec2(rx * dir2D1.x, ry * dir2D1.y);
+      float rho1Sq = rho1 * rho1;
+      float rho1Poly = rho1 * (1.0 + uDistortionK1 * rho1Sq + uDistortionK2 * rho1Sq * rho1Sq);
 
-      // Rear lens UV mapping (centered at 0.75, 0.5)
-      // For rear camera facing +Z, camera right is -X
-      vec2 rearDirXY = vec2(-srcDir.x, srcDir.y);
+      float rho1R = rho1Poly * (1.0 + uChromaticAbRed * rho1Sq);
+      float rho1G = rho1Poly;
+      float rho1B = rho1Poly * (1.0 + uChromaticAbBlue * rho1Sq);
+
+      vec2 c1 = vec2(0.25 + uCenterOffset1.x, 0.5 + uCenterOffset1.y);
+      vec2 uv1R = c1 + rho1R * vec2(rx * dir2D1.x, ry * dir2D1.y);
+      vec2 uv1G = c1 + rho1G * vec2(rx * dir2D1.x, ry * dir2D1.y);
+      vec2 uv1B = c1 + rho1B * vec2(rx * dir2D1.x, ry * dir2D1.y);
+
+      // Rear lens UV mapping with Kannala-Brandt polynomial & LCA
+      vec2 rearDirXY = vec2(-dirRear.x, dirRear.y);
       float d2 = length(rearDirXY);
       vec2 dir2D2 = (d2 > 1e-6) ? (rearDirXY / d2) : vec2(0.0, 1.0);
       float rho2 = theta2 / max(1e-4, thetaMax);
-      vec2 c2 = vec2(0.75 + uCenterOffset2.x, 0.5 + uCenterOffset2.y);
-      vec2 uv2 = c2 + rho2 * vec2(rx * dir2D2.x, ry * dir2D2.y);
+      float rho2Sq = rho2 * rho2;
+      float rho2Poly = rho2 * (1.0 + uDistortionK1 * rho2Sq + uDistortionK2 * rho2Sq * rho2Sq);
 
-      // Overlap blending between front and rear lenses
-      // deltaTheta > 0 means closer to front lens; deltaTheta < 0 means closer to rear lens
+      float rho2R = rho2Poly * (1.0 + uChromaticAbRed * rho2Sq);
+      float rho2G = rho2Poly;
+      float rho2B = rho2Poly * (1.0 + uChromaticAbBlue * rho2Sq);
+
+      vec2 c2 = vec2(0.75 + uCenterOffset2.x, 0.5 + uCenterOffset2.y);
+      vec2 uv2R = c2 + rho2R * vec2(rx * dir2D2.x, ry * dir2D2.y);
+      vec2 uv2G = c2 + rho2G * vec2(rx * dir2D2.x, ry * dir2D2.y);
+      vec2 uv2B = c2 + rho2B * vec2(rx * dir2D2.x, ry * dir2D2.y);
+
+      // Coverage-Depth & Optical Quality Blend Weight
       float deltaTheta = theta2 - theta1;
       float halfBlend = max(0.001, uBlendAngleRad);
-      float w = smoothstep(-halfBlend, halfBlend, deltaTheta);
+      float wAngle = smoothstep(-halfBlend, halfBlend, deltaTheta);
+
+      // Optical center distance quality factor (sharpness drops towards perimeter)
+      float q1 = max(0.001, 1.0 - clamp(rho1 * rho1, 0.0, 1.0));
+      float q2 = max(0.001, 1.0 - clamp(rho2 * rho2, 0.0, 1.0));
+      float wQuality = q1 / (q1 + q2);
+      float w = mix(wAngle, wQuality, 0.15);
 
       // Hard clamp if outside maximum optical FOV of either lens
       if (theta1 > thetaMax) {
@@ -141,13 +184,33 @@ export const EquirectangularFragmentShader = /* glsl */ `
         w = 1.0;
       }
 
+      // Sample color channels with Lateral Chromatic Aberration correction
+      vec4 col1 = vec4(
+        texture2D(tSource, uv1R).r,
+        texture2D(tSource, uv1G).g,
+        texture2D(tSource, uv1B).b,
+        1.0
+      );
+      vec4 col2 = vec4(
+        texture2D(tSource, uv2R).r,
+        texture2D(tSource, uv2G).g,
+        texture2D(tSource, uv2B).b,
+        1.0
+      );
+
+      // Symmetric Photometric Exposure Balance in Overlap
+      float G = pow(2.0, uExposureBalance * 1.5);
+      float sqrtG = sqrt(max(0.01, G));
+      float invSqrtG = 1.0 / sqrtG;
+      float seamWeight = 2.0 * min(w, 1.0 - w);
+      col1.rgb *= mix(1.0, invSqrtG, seamWeight);
+      col2.rgb *= mix(1.0, sqrtG, seamWeight);
+
       if (w <= 0.001) {
-        color = texture2D(tSource, uv2);
+        color = col2;
       } else if (w >= 0.999) {
-        color = texture2D(tSource, uv1);
+        color = col1;
       } else {
-        vec4 col1 = texture2D(tSource, uv1);
-        vec4 col2 = texture2D(tSource, uv2);
         color = mix(col2, col1, w);
       }
     } else {
@@ -226,37 +289,61 @@ export function sampleDualFisheyeCoordinates(
   const thetaMax = degToRad(config.lensFov * 0.5);
   const blendAngleRad = degToRad(config.blendAngle);
 
+  // Inter-lens physical baseline parallax correction
+  const baselineM = (config.lensBaselineMm ?? 0) * 0.001;
+  const distM = Math.max(0.2, config.convergenceDistance ?? 2.5);
+
+  const fz = distM * nz - (-baselineM * 0.5);
+  const rz = distM * nz - (baselineM * 0.5);
+  const fxLen = Math.hypot(distM * nx, distM * ny, fz);
+  const rxLen = Math.hypot(distM * nx, distM * ny, rz);
+
+  const fDir = { x: (distM * nx) / (fxLen || 1), y: (distM * ny) / (fxLen || 1), z: fz / (fxLen || 1) };
+  const rDir = { x: (distM * nx) / (rxLen || 1), y: (distM * ny) / (rxLen || 1), z: rz / (rxLen || 1) };
+
   // Front Lens (Facing -Z)
-  const cosTheta1 = Math.max(-1, Math.min(1, -nz));
+  const cosTheta1 = Math.max(-1, Math.min(1, -fDir.z));
   const theta1 = Math.acos(cosTheta1);
 
   // Rear Lens (Facing +Z)
-  const cosTheta2 = Math.max(-1, Math.min(1, nz));
+  const cosTheta2 = Math.max(-1, Math.min(1, rDir.z));
   const theta2 = Math.acos(cosTheta2);
 
   const rx = 0.25 * config.radiusScale;
   const ry = 0.50 * config.radiusScale;
 
+  const k1 = config.distortionK1 ?? 0;
+  const k2 = config.distortionK2 ?? 0;
+
   // Front lens UV
-  const d1 = Math.hypot(nx, ny);
-  const dir2D1 = d1 > 1e-6 ? [nx / d1, ny / d1] : [0, 1];
+  const d1 = Math.hypot(fDir.x, fDir.y);
+  const dir2D1 = d1 > 1e-6 ? [fDir.x / d1, fDir.y / d1] : [0, 1];
   const rho1 = theta1 / Math.max(1e-4, thetaMax);
-  const u1 = 0.25 + config.centerOffsetX1 + rho1 * rx * dir2D1[0];
-  const v1 = 0.50 + config.centerOffsetY1 + rho1 * ry * dir2D1[1];
+  const rho1Sq = rho1 * rho1;
+  const rho1Poly = rho1 * (1.0 + k1 * rho1Sq + k2 * rho1Sq * rho1Sq);
+  const u1 = 0.25 + config.centerOffsetX1 + rho1Poly * rx * dir2D1[0];
+  const v1 = 0.50 + config.centerOffsetY1 + rho1Poly * ry * dir2D1[1];
 
   // Rear lens UV
-  const rearDirXY = [-nx, ny];
+  const rearDirXY = [-rDir.x, rDir.y];
   const d2 = Math.hypot(rearDirXY[0], rearDirXY[1]);
   const dir2D2 = d2 > 1e-6 ? [rearDirXY[0] / d2, rearDirXY[1] / d2] : [0, 1];
   const rho2 = theta2 / Math.max(1e-4, thetaMax);
-  const u2 = 0.75 + config.centerOffsetX2 + rho2 * rx * dir2D2[0];
-  const v2 = 0.50 + config.centerOffsetY2 + rho2 * ry * dir2D2[1];
+  const rho2Sq = rho2 * rho2;
+  const rho2Poly = rho2 * (1.0 + k1 * rho2Sq + k2 * rho2Sq * rho2Sq);
+  const u2 = 0.75 + config.centerOffsetX2 + rho2Poly * rx * dir2D2[0];
+  const v2 = 0.50 + config.centerOffsetY2 + rho2Poly * ry * dir2D2[1];
 
-  // Smoothstep blend
+  // Blend weights
   const deltaTheta = theta2 - theta1;
   const halfBlend = Math.max(0.001, blendAngleRad);
   const t = Math.max(0, Math.min(1, (deltaTheta - (-halfBlend)) / (2 * halfBlend)));
-  let w = t * t * (3 - 2 * t);
+  const wAngle = t * t * (3 - 2 * t);
+
+  const q1 = Math.max(0.001, 1.0 - Math.min(1, rho1 * rho1));
+  const q2 = Math.max(0.001, 1.0 - Math.min(1, rho2 * rho2));
+  const wQuality = q1 / (q1 + q2);
+  let w = 0.85 * wAngle + 0.15 * wQuality;
 
   if (theta1 > thetaMax) w = 0;
   else if (theta2 > thetaMax) w = 1;

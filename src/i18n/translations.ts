@@ -85,6 +85,15 @@ export const translations = {
     presetOneR: 'ONE R / RS (360 Mod)',
     presetOneX: 'ONE X / X2',
     presetX3X4: 'X3 / X4',
+    advancedOpticsTitle: 'Calibración Óptica Avanzada (Insta360 Studio)',
+    distortionK1: 'Distorsión Polinomial k1 (Compensación de barril)',
+    distortionK2: 'Distorsión Polinomial k2',
+    chromaticAbRed: 'Aberración Cromática Rojo (LCA)',
+    chromaticAbBlue: 'Aberración Cromática Azul (LCA)',
+    lensBaseline: 'Separación Física de Lentes (Baseline)',
+    convergenceDistance: 'Distancia de Convergencia / Sujeto',
+    exposureBalance: 'Balance Fotométrico de Solapamiento',
+    advancedOpticsHint: 'Ajuste submilimétrico y óptico para eliminar fantasmas de paralaje y halos cromáticos.',
 
     // Orientation Controls
     orientationTitle: 'Punto de Vista & Orientación',
@@ -232,6 +241,15 @@ export const translations = {
     presetOneR: 'ONE R / RS (360 Mod)',
     presetOneX: 'ONE X / X2',
     presetX3X4: 'X3 / X4',
+    advancedOpticsTitle: 'Advanced Optical Calibration (Insta360 Studio)',
+    distortionK1: 'Polynomial Distortion k1 (Barrel Compensation)',
+    distortionK2: 'Polynomial Distortion k2',
+    chromaticAbRed: 'Lateral Chromatic Aberration Red (LCA)',
+    chromaticAbBlue: 'Lateral Chromatic Aberration Blue (LCA)',
+    lensBaseline: 'Physical Lens Separation (Baseline)',
+    convergenceDistance: 'Convergence / Subject Distance',
+    exposureBalance: 'Overlap Photometric Exposure Balance',
+    advancedOpticsHint: 'Sub-millimeter and optical tuning to eradicate parallax ghosting and chromatic fringing.',
 
     // Orientation Controls
     orientationTitle: 'Viewpoint & Orientation',
@@ -379,6 +397,15 @@ export const translations = {
     presetOneR: 'ONE R / RS (360镜头)',
     presetOneX: 'ONE X / X2',
     presetX3X4: 'X3 / X4',
+    advancedOpticsTitle: '高级光学校准 (Insta360 Studio 引擎)',
+    distortionK1: '多项式径向畸变 k1 (桶形畸变补偿)',
+    distortionK2: '多项式径向畸变 k2',
+    chromaticAbRed: '横向色差校正 红光 (LCA)',
+    chromaticAbBlue: '横向色差校正 蓝光 (LCA)',
+    lensBaseline: '物理镜头间距基线 (Baseline)',
+    convergenceDistance: '场景汇聚距离 / 主体距离',
+    exposureBalance: '重叠区域光度曝光平衡',
+    advancedOpticsHint: '亚毫米级物理基线与光学调谐，彻底消除视差重影与边缘色边。',
 
     // Orientation Controls
     orientationTitle: '视角与全景朝向',

@@ -36,6 +36,15 @@ const SphereFragmentShader = /* glsl */ `
   uniform vec2 uCenterOffset2;
   uniform float uRadiusScale;
 
+  // Advanced Optical Calibration Uniforms
+  uniform float uDistortionK1;
+  uniform float uDistortionK2;
+  uniform float uChromaticAbRed;
+  uniform float uChromaticAbBlue;
+  uniform float uLensBaselineMm;
+  uniform float uConvergenceDistance;
+  uniform float uExposureBalance;
+
   uniform float uExposure;
   uniform float uBrightness;
   uniform float uContrast;
@@ -73,7 +82,7 @@ const SphereFragmentShader = /* glsl */ `
     vec4 color;
 
     if (uInputProjection == 1) {
-      // INSTA360 DUAL-FISHEYE OPTICAL STITCHING
+      // INSTA360 DUAL-FISHEYE OPTICAL STITCHING (ADVANCED)
       float lon = (uv.x - 0.5) * TWO_PI;
       float lat = (uv.y - 0.5) * PI;
 
@@ -85,39 +94,95 @@ const SphereFragmentShader = /* glsl */ `
       );
 
       float thetaMax = uLensFovRad * 0.5;
-      float theta1 = acos(clamp(-dir.z, -1.0, 1.0));
-      float theta2 = acos(clamp(dir.z, -1.0, 1.0));
+
+      // Inter-lens baseline parallax correction
+      float baselineM = uLensBaselineMm * 0.001;
+      float distM = max(0.2, uConvergenceDistance);
+      vec3 dirFront = normalize(distM * dir - vec3(0.0, 0.0, -baselineM * 0.5));
+      vec3 dirRear  = normalize(distM * dir - vec3(0.0, 0.0,  baselineM * 0.5));
+
+      float theta1 = acos(clamp(-dirFront.z, -1.0, 1.0));
+      float theta2 = acos(clamp(dirRear.z, -1.0, 1.0));
 
       float rx = 0.25 * uRadiusScale;
       float ry = 0.50 * uRadiusScale;
 
-      float d1 = length(dir.xy);
-      vec2 dir2D1 = (d1 > 1e-6) ? (dir.xy / d1) : vec2(0.0, 1.0);
+      // Front lens UV mapping with Kannala-Brandt polynomial & LCA
+      float d1 = length(dirFront.xy);
+      vec2 dir2D1 = (d1 > 1e-6) ? (dirFront.xy / d1) : vec2(0.0, 1.0);
       float rho1 = theta1 / max(1e-4, thetaMax);
-      vec2 c1 = vec2(0.25 + uCenterOffset1.x, 0.5 + uCenterOffset1.y);
-      vec2 uv1 = c1 + rho1 * vec2(rx * dir2D1.x, ry * dir2D1.y);
+      float rho1Sq = rho1 * rho1;
+      float rho1Poly = rho1 * (1.0 + uDistortionK1 * rho1Sq + uDistortionK2 * rho1Sq * rho1Sq);
 
-      vec2 rearDirXY = vec2(-dir.x, dir.y);
+      float rho1R = rho1Poly * (1.0 + uChromaticAbRed * rho1Sq);
+      float rho1G = rho1Poly;
+      float rho1B = rho1Poly * (1.0 + uChromaticAbBlue * rho1Sq);
+
+      vec2 c1 = vec2(0.25 + uCenterOffset1.x, 0.5 + uCenterOffset1.y);
+      vec2 uv1R = c1 + rho1R * vec2(rx * dir2D1.x, ry * dir2D1.y);
+      vec2 uv1G = c1 + rho1G * vec2(rx * dir2D1.x, ry * dir2D1.y);
+      vec2 uv1B = c1 + rho1B * vec2(rx * dir2D1.x, ry * dir2D1.y);
+
+      // Rear lens UV mapping with Kannala-Brandt polynomial & LCA
+      vec2 rearDirXY = vec2(-dirRear.x, dirRear.y);
       float d2 = length(rearDirXY);
       vec2 dir2D2 = (d2 > 1e-6) ? (rearDirXY / d2) : vec2(0.0, 1.0);
       float rho2 = theta2 / max(1e-4, thetaMax);
-      vec2 c2 = vec2(0.75 + uCenterOffset2.x, 0.5 + uCenterOffset2.y);
-      vec2 uv2 = c2 + rho2 * vec2(rx * dir2D2.x, ry * dir2D2.y);
+      float rho2Sq = rho2 * rho2;
+      float rho2Poly = rho2 * (1.0 + uDistortionK1 * rho2Sq + uDistortionK2 * rho2Sq * rho2Sq);
 
+      float rho2R = rho2Poly * (1.0 + uChromaticAbRed * rho2Sq);
+      float rho2G = rho2Poly;
+      float rho2B = rho2Poly * (1.0 + uChromaticAbBlue * rho2Sq);
+
+      vec2 c2 = vec2(0.75 + uCenterOffset2.x, 0.5 + uCenterOffset2.y);
+      vec2 uv2R = c2 + rho2R * vec2(rx * dir2D2.x, ry * dir2D2.y);
+      vec2 uv2G = c2 + rho2G * vec2(rx * dir2D2.x, ry * dir2D2.y);
+      vec2 uv2B = c2 + rho2B * vec2(rx * dir2D2.x, ry * dir2D2.y);
+
+      // Coverage-Depth & Optical Quality Blend Weight
       float deltaTheta = theta2 - theta1;
       float halfBlend = max(0.001, uBlendAngleRad);
-      float w = smoothstep(-halfBlend, halfBlend, deltaTheta);
+      float wAngle = smoothstep(-halfBlend, halfBlend, deltaTheta);
 
-      if (theta1 > thetaMax) w = 0.0;
-      else if (theta2 > thetaMax) w = 1.0;
+      float q1 = max(0.001, 1.0 - clamp(rho1 * rho1, 0.0, 1.0));
+      float q2 = max(0.001, 1.0 - clamp(rho2 * rho2, 0.0, 1.0));
+      float wQuality = q1 / (q1 + q2);
+      float w = mix(wAngle, wQuality, 0.15);
+
+      if (theta1 > thetaMax) {
+        w = 0.0;
+      } else if (theta2 > thetaMax) {
+        w = 1.0;
+      }
+
+      // Sample color channels with LCA correction
+      vec4 col1 = vec4(
+        texture2D(tSource, uv1R).r,
+        texture2D(tSource, uv1G).g,
+        texture2D(tSource, uv1B).b,
+        1.0
+      );
+      vec4 col2 = vec4(
+        texture2D(tSource, uv2R).r,
+        texture2D(tSource, uv2G).g,
+        texture2D(tSource, uv2B).b,
+        1.0
+      );
+
+      // Symmetric Photometric Exposure Balance
+      float G = pow(2.0, uExposureBalance * 1.5);
+      float sqrtG = sqrt(max(0.01, G));
+      float invSqrtG = 1.0 / sqrtG;
+      float seamWeight = 2.0 * min(w, 1.0 - w);
+      col1.rgb *= mix(1.0, invSqrtG, seamWeight);
+      col2.rgb *= mix(1.0, sqrtG, seamWeight);
 
       if (w <= 0.001) {
-        color = texture2D(tSource, uv2);
+        color = col2;
       } else if (w >= 0.999) {
-        color = texture2D(tSource, uv1);
+        color = col1;
       } else {
-        vec4 col1 = texture2D(tSource, uv1);
-        vec4 col2 = texture2D(tSource, uv2);
         color = mix(col2, col1, w);
       }
     } else {
@@ -286,6 +351,13 @@ export const Viewer360: React.FC<Viewer360Props> = ({
         uCenterOffset1: { value: new THREE.Vector2(stitching.centerOffsetX1, stitching.centerOffsetY1) },
         uCenterOffset2: { value: new THREE.Vector2(stitching.centerOffsetX2, stitching.centerOffsetY2) },
         uRadiusScale: { value: stitching.radiusScale },
+        uDistortionK1: { value: stitching.distortionK1 ?? 0 },
+        uDistortionK2: { value: stitching.distortionK2 ?? 0 },
+        uChromaticAbRed: { value: stitching.chromaticAbRed ?? 0 },
+        uChromaticAbBlue: { value: stitching.chromaticAbBlue ?? 0 },
+        uLensBaselineMm: { value: stitching.lensBaselineMm ?? 28 },
+        uConvergenceDistance: { value: stitching.convergenceDistance ?? 2.5 },
+        uExposureBalance: { value: stitching.exposureBalance ?? 0 },
         uExposure: { value: colorAdjustments.exposure / 100 },
         uBrightness: { value: colorAdjustments.brightness / 100 },
         uContrast: { value: colorAdjustments.contrast / 100 },
@@ -391,6 +463,13 @@ export const Viewer360: React.FC<Viewer360Props> = ({
       stitching.centerOffsetY2
     );
     shaderMaterialRef.current.uniforms.uRadiusScale.value = stitching.radiusScale;
+    shaderMaterialRef.current.uniforms.uDistortionK1.value = stitching.distortionK1 ?? 0;
+    shaderMaterialRef.current.uniforms.uDistortionK2.value = stitching.distortionK2 ?? 0;
+    shaderMaterialRef.current.uniforms.uChromaticAbRed.value = stitching.chromaticAbRed ?? 0;
+    shaderMaterialRef.current.uniforms.uChromaticAbBlue.value = stitching.chromaticAbBlue ?? 0;
+    shaderMaterialRef.current.uniforms.uLensBaselineMm.value = stitching.lensBaselineMm ?? 28;
+    shaderMaterialRef.current.uniforms.uConvergenceDistance.value = stitching.convergenceDistance ?? 2.5;
+    shaderMaterialRef.current.uniforms.uExposureBalance.value = stitching.exposureBalance ?? 0;
 
     shaderMaterialRef.current.uniforms.uExposure.value = colorAdjustments.exposure / 100;
     shaderMaterialRef.current.uniforms.uBrightness.value = colorAdjustments.brightness / 100;

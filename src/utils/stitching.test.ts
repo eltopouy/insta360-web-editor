@@ -137,6 +137,13 @@ describe('Insta360 Optical Stitching Engine & Math Tests', () => {
       centerOffsetX2: 0,
       centerOffsetY2: 0,
       radiusScale: 0.99,
+      distortionK1: -0.035,
+      distortionK2: 0.008,
+      chromaticAbRed: 0.004,
+      chromaticAbBlue: -0.005,
+      lensBaselineMm: 28.0,
+      convergenceDistance: 2.0,
+      exposureBalance: 0.0,
     };
 
     // Forward ray (-Z)
@@ -147,12 +154,66 @@ describe('Insta360 Optical Stitching Engine & Math Tests', () => {
 
     // Seam equator ray (X=1, Z=0)
     const seam = sampleDualFisheyeCoordinates({ x: 1, y: 0, z: 0 }, oneRConfig);
-    assert.ok(Math.abs(seam.weightFront - 0.5) < 1e-4, 'ONE R seam must blend at exactly 50%');
+    assert.ok(Math.abs(seam.weightFront - 0.5) < 1e-4, 'ONE R seam must blend symmetrically');
 
     // Rear ray (+Z)
     const rear = sampleDualFisheyeCoordinates({ x: 0, y: 0, z: 1 }, oneRConfig);
     assert.strictEqual(rear.weightFront, 0.0);
     assert.ok(Math.abs(rear.uv2[0] - 0.75) < 1e-4);
     assert.ok(Math.abs(rear.uv2[1] - 0.50) < 1e-4);
+  });
+
+  it('verifies polynomial distortion (k1, k2) radially compresses or expands perimeter rays', () => {
+    // 45 degree angle ray between optical axis and edge
+    const angleRad = Math.PI / 4;
+    const dir = { x: Math.sin(angleRad), y: 0, z: -Math.cos(angleRad) };
+
+    const linearConfig: StitchingConfig = {
+      ...DEFAULT_STITCHING_CONFIG,
+      distortionK1: 0.0,
+      distortionK2: 0.0,
+      lensBaselineMm: 0,
+    };
+    const linearRes = sampleDualFisheyeCoordinates(dir, linearConfig);
+
+    const barrelConfig: StitchingConfig = {
+      ...DEFAULT_STITCHING_CONFIG,
+      distortionK1: -0.08, // negative k1 pulls perimeter inward (barrel compensation)
+      distortionK2: 0.0,
+      lensBaselineMm: 0,
+    };
+    const barrelRes = sampleDualFisheyeCoordinates(dir, barrelConfig);
+
+    // Barrel compensation pulls UV coordinate towards center (0.25)
+    const linearDistFromCenter = Math.abs(linearRes.uv1[0] - 0.25);
+    const barrelDistFromCenter = Math.abs(barrelRes.uv1[0] - 0.25);
+
+    assert.ok(
+      barrelDistFromCenter < linearDistFromCenter,
+      `Expected barrel distortion to reduce radius: ${barrelDistFromCenter} < ${linearDistFromCenter}`
+    );
+  });
+
+  it('verifies inter-lens baseline parallax adjusts rays at close convergence distances', () => {
+    // Oblique ray where baseline parallax is active
+    const dir = { x: 0.7071, y: 0, z: -0.7071 };
+
+    const infinityConfig: StitchingConfig = {
+      ...DEFAULT_STITCHING_CONFIG,
+      lensBaselineMm: 28,
+      convergenceDistance: 50.0, // practically infinity
+    };
+    const closeConfig: StitchingConfig = {
+      ...DEFAULT_STITCHING_CONFIG,
+      lensBaselineMm: 28,
+      convergenceDistance: 0.8, // 80cm close subject
+    };
+
+    const infRes = sampleDualFisheyeCoordinates(dir, infinityConfig);
+    const closeRes = sampleDualFisheyeCoordinates(dir, closeConfig);
+
+    // Close subject ray shifts relative to infinity
+    const uvShift = Math.hypot(closeRes.uv1[0] - infRes.uv1[0], closeRes.uv1[1] - infRes.uv1[1]);
+    assert.ok(uvShift > 1e-4, 'Close range convergence must apply parallax offset to nodal point');
   });
 });

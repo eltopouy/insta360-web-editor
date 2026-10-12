@@ -46,6 +46,13 @@ let editorState = {
     centerOffsetX2: 0,
     centerOffsetY2: 0,
     radiusScale: 1.0,
+    distortionK1: 0,
+    distortionK2: 0,
+    chromaticAbRed: 0,
+    chromaticAbBlue: 0,
+    lensBaselineMm: 28,
+    convergenceDistance: 2.5,
+    exposureBalance: 0,
   },
   viewMode: 'split',
   language: 'es',
@@ -492,6 +499,34 @@ const TOOLS = [
           type: 'number',
           description: 'Escala del radio del círculo óptico (0.90 a 1.10).',
         },
+        distortionK1: {
+          type: 'number',
+          description: 'Coeficiente polinomial de distorsión radial k1 (compensación de barril, -0.15 a 0.15).',
+        },
+        distortionK2: {
+          type: 'number',
+          description: 'Coeficiente polinomial de distorsión radial k2 (-0.08 a 0.08).',
+        },
+        chromaticAbRed: {
+          type: 'number',
+          description: 'Factor de aberración cromática lateral para canal Rojo (-0.03 a 0.03).',
+        },
+        chromaticAbBlue: {
+          type: 'number',
+          description: 'Factor de aberración cromática lateral para canal Azul (-0.03 a 0.03).',
+        },
+        lensBaselineMm: {
+          type: 'number',
+          description: 'Separación física entre lentes en milímetros (e.g. 28mm para ONE R, 24mm para ONE X).',
+        },
+        convergenceDistance: {
+          type: 'number',
+          description: 'Distancia de convergencia y sujeto en metros (0.5m a 15m).',
+        },
+        exposureBalance: {
+          type: 'number',
+          description: 'Balance fotométrico simétrico en la zona de solapamiento (-1.0 a 1.0).',
+        },
       },
     },
   },
@@ -732,6 +767,27 @@ function handleToolCall(name, args) {
       }
       if (typeof args.radiusScale === 'number') {
         updated.radiusScale = Math.max(0.9, Math.min(1.1, args.radiusScale));
+      }
+      if (typeof args.distortionK1 === 'number') {
+        updated.distortionK1 = Math.max(-0.15, Math.min(0.15, args.distortionK1));
+      }
+      if (typeof args.distortionK2 === 'number') {
+        updated.distortionK2 = Math.max(-0.08, Math.min(0.08, args.distortionK2));
+      }
+      if (typeof args.chromaticAbRed === 'number') {
+        updated.chromaticAbRed = Math.max(-0.03, Math.min(0.03, args.chromaticAbRed));
+      }
+      if (typeof args.chromaticAbBlue === 'number') {
+        updated.chromaticAbBlue = Math.max(-0.03, Math.min(0.03, args.chromaticAbBlue));
+      }
+      if (typeof args.lensBaselineMm === 'number') {
+        updated.lensBaselineMm = Math.max(0, Math.min(45, args.lensBaselineMm));
+      }
+      if (typeof args.convergenceDistance === 'number') {
+        updated.convergenceDistance = Math.max(0.5, Math.min(15.0, args.convergenceDistance));
+      }
+      if (typeof args.exposureBalance === 'number') {
+        updated.exposureBalance = Math.max(-1.0, Math.min(1.0, args.exposureBalance));
       }
 
       editorState.stitching = { ...editorState.stitching, ...updated };

@@ -9,6 +9,8 @@ import {
   SlidersHorizontal,
   Compass,
   CheckCircle2,
+  Cpu,
+  Sliders,
 } from 'lucide-react';
 
 interface StitchingControlsProps {
@@ -140,6 +142,13 @@ export const StitchingControls: React.FC<StitchingControlsProps> = ({
                     centerOffsetY1: 0,
                     centerOffsetX2: 0,
                     centerOffsetY2: 0,
+                    distortionK1: -0.035,
+                    distortionK2: 0.008,
+                    chromaticAbRed: 0.004,
+                    chromaticAbBlue: -0.005,
+                    lensBaselineMm: 28.0,
+                    convergenceDistance: 2.0,
+                    exposureBalance: 0.0,
                   })
                 }
                 className="px-2 py-1.5 text-[10px] font-medium bg-studio-700/60 hover:bg-studio-600 text-gray-200 hover:text-white rounded border border-white/10 hover:border-studio-accent/40 transition-all text-center truncate"
@@ -158,6 +167,13 @@ export const StitchingControls: React.FC<StitchingControlsProps> = ({
                     centerOffsetY1: 0,
                     centerOffsetX2: 0,
                     centerOffsetY2: 0,
+                    distortionK1: -0.02,
+                    distortionK2: 0.004,
+                    chromaticAbRed: 0.002,
+                    chromaticAbBlue: -0.003,
+                    lensBaselineMm: 24.0,
+                    convergenceDistance: 2.5,
+                    exposureBalance: 0.0,
                   })
                 }
                 className="px-2 py-1.5 text-[10px] font-medium bg-studio-700/60 hover:bg-studio-600 text-gray-200 hover:text-white rounded border border-white/10 hover:border-studio-accent/40 transition-all text-center truncate"
@@ -176,6 +192,13 @@ export const StitchingControls: React.FC<StitchingControlsProps> = ({
                     centerOffsetY1: 0,
                     centerOffsetX2: 0,
                     centerOffsetY2: 0,
+                    distortionK1: -0.015,
+                    distortionK2: 0.003,
+                    chromaticAbRed: 0.002,
+                    chromaticAbBlue: -0.002,
+                    lensBaselineMm: 30.0,
+                    convergenceDistance: 2.5,
+                    exposureBalance: 0.0,
                   })
                 }
                 className="px-2 py-1.5 text-[10px] font-medium bg-studio-700/60 hover:bg-studio-600 text-gray-200 hover:text-white rounded border border-white/10 hover:border-studio-accent/40 transition-all text-center truncate"
@@ -325,6 +348,146 @@ export const StitchingControls: React.FC<StitchingControlsProps> = ({
                     className="w-full accent-studio-accent h-1 bg-studio-700 rounded-lg appearance-none cursor-pointer"
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Advanced Optical Calibration (Insta360 Studio) */}
+          <div className="space-y-3 pt-3 border-t border-white/10">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-studio-accent flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-studio-accent" />
+                <span>{t('advancedOpticsTitle')}</span>
+              </div>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-studio-accent/15 text-studio-accent border border-studio-accent/30 font-semibold">
+                STUDIO EQ
+              </span>
+            </div>
+
+            <p className="text-[10px] text-gray-400 leading-tight">
+              {t('advancedOpticsHint')}
+            </p>
+
+            <div className="p-3 bg-studio-900/80 rounded-lg border border-white/5 space-y-3">
+              {/* Polynomial Distortion k1 */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-gray-300">{t('distortionK1')}</span>
+                  <span className="font-mono text-studio-accent">{(config.distortionK1 ?? 0).toFixed(3)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="-0.12"
+                  max="0.12"
+                  step="0.002"
+                  value={config.distortionK1 ?? 0}
+                  onChange={(e) => onChange({ distortionK1: parseFloat(e.target.value) })}
+                  className="w-full accent-studio-accent h-1.5 bg-studio-700 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              {/* Polynomial Distortion k2 */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-gray-300">{t('distortionK2')}</span>
+                  <span className="font-mono text-studio-accent">{(config.distortionK2 ?? 0).toFixed(3)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="-0.06"
+                  max="0.06"
+                  step="0.002"
+                  value={config.distortionK2 ?? 0}
+                  onChange={(e) => onChange({ distortionK2: parseFloat(e.target.value) })}
+                  className="w-full accent-studio-accent h-1.5 bg-studio-700 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+
+              {/* Chromatic Aberration Red and Blue */}
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-gray-300">{t('chromaticAbRed')}</span>
+                    <span className="font-mono text-red-400">{(config.chromaticAbRed ?? 0).toFixed(3)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-0.025"
+                    max="0.025"
+                    step="0.001"
+                    value={config.chromaticAbRed ?? 0}
+                    onChange={(e) => onChange({ chromaticAbRed: parseFloat(e.target.value) })}
+                    className="w-full accent-red-500 h-1 bg-studio-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-gray-300">{t('chromaticAbBlue')}</span>
+                    <span className="font-mono text-blue-400">{(config.chromaticAbBlue ?? 0).toFixed(3)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="-0.025"
+                    max="0.025"
+                    step="0.001"
+                    value={config.chromaticAbBlue ?? 0}
+                    onChange={(e) => onChange({ chromaticAbBlue: parseFloat(e.target.value) })}
+                    className="w-full accent-blue-500 h-1 bg-studio-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Lens Baseline and Convergence Distance */}
+              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/5">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-gray-300">{t('lensBaseline')}</span>
+                    <span className="font-mono text-studio-accent">{(config.lensBaselineMm ?? 28).toFixed(0)} mm</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="45"
+                    step="1"
+                    value={config.lensBaselineMm ?? 28}
+                    onChange={(e) => onChange({ lensBaselineMm: parseFloat(e.target.value) })}
+                    className="w-full accent-studio-accent h-1 bg-studio-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[10px]">
+                    <span className="text-gray-300">{t('convergenceDistance')}</span>
+                    <span className="font-mono text-studio-accent">{(config.convergenceDistance ?? 2.5).toFixed(1)} m</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="15.0"
+                    step="0.1"
+                    value={config.convergenceDistance ?? 2.5}
+                    onChange={(e) => onChange({ convergenceDistance: parseFloat(e.target.value) })}
+                    className="w-full accent-studio-accent h-1 bg-studio-700 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {/* Overlap Exposure Photometric Balance */}
+              <div className="space-y-1 pt-1 border-t border-white/5">
+                <div className="flex justify-between text-[11px]">
+                  <span className="text-gray-300">{t('exposureBalance')}</span>
+                  <span className="font-mono text-studio-accent">
+                    {(config.exposureBalance ?? 0) > 0 ? `+${(config.exposureBalance ?? 0).toFixed(2)}` : (config.exposureBalance ?? 0).toFixed(2)}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="-1.0"
+                  max="1.0"
+                  step="0.05"
+                  value={config.exposureBalance ?? 0}
+                  onChange={(e) => onChange({ exposureBalance: parseFloat(e.target.value) })}
+                  className="w-full accent-studio-accent h-1.5 bg-studio-700 rounded-lg appearance-none cursor-pointer"
+                />
               </div>
             </div>
           </div>

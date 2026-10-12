@@ -90,6 +90,13 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
         uCenterOffset1: { value: new THREE.Vector2(stitching.centerOffsetX1, stitching.centerOffsetY1) },
         uCenterOffset2: { value: new THREE.Vector2(stitching.centerOffsetX2, stitching.centerOffsetY2) },
         uRadiusScale: { value: stitching.radiusScale },
+        uDistortionK1: { value: stitching.distortionK1 ?? 0 },
+        uDistortionK2: { value: stitching.distortionK2 ?? 0 },
+        uChromaticAbRed: { value: stitching.chromaticAbRed ?? 0 },
+        uChromaticAbBlue: { value: stitching.chromaticAbBlue ?? 0 },
+        uLensBaselineMm: { value: stitching.lensBaselineMm ?? 28 },
+        uConvergenceDistance: { value: stitching.convergenceDistance ?? 2.5 },
+        uExposureBalance: { value: stitching.exposureBalance ?? 0 },
         uExposure: { value: colorAdjustments.exposure / 100 },
         uBrightness: { value: colorAdjustments.brightness / 100 },
         uContrast: { value: colorAdjustments.contrast / 100 },
@@ -164,6 +171,13 @@ export const EquirectangularPreview: React.FC<EquirectangularPreviewProps> = ({
       stitching.centerOffsetY2
     );
     shaderMaterialRef.current.uniforms.uRadiusScale.value = stitching.radiusScale;
+    shaderMaterialRef.current.uniforms.uDistortionK1.value = stitching.distortionK1 ?? 0;
+    shaderMaterialRef.current.uniforms.uDistortionK2.value = stitching.distortionK2 ?? 0;
+    shaderMaterialRef.current.uniforms.uChromaticAbRed.value = stitching.chromaticAbRed ?? 0;
+    shaderMaterialRef.current.uniforms.uChromaticAbBlue.value = stitching.chromaticAbBlue ?? 0;
+    shaderMaterialRef.current.uniforms.uLensBaselineMm.value = stitching.lensBaselineMm ?? 28;
+    shaderMaterialRef.current.uniforms.uConvergenceDistance.value = stitching.convergenceDistance ?? 2.5;
+    shaderMaterialRef.current.uniforms.uExposureBalance.value = stitching.exposureBalance ?? 0;
 
     shaderMaterialRef.current.uniforms.uExposure.value = colorAdjustments.exposure / 100;
     shaderMaterialRef.current.uniforms.uBrightness.value = colorAdjustments.brightness / 100;
